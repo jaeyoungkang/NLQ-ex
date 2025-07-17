@@ -1,9 +1,19 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from google.cloud import bigquery
 import anthropic
 import os
 import json
 from datetime import datetime
+
+@app.route('/')
+def index():
+    """메인 페이지"""
+    return send_from_directory('.', 'index.html')
+
+@app.route('/<path:filename>')
+def static_files(filename):
+    """정적 파일 서빙"""
+    return send_from_directory('.', filename)
 
 app = Flask(__name__)
 
