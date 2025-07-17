@@ -7,18 +7,30 @@ from datetime import datetime
 
 app = Flask(__name__)
 
+# 환경 변수에서 API 키 읽기
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
+if not ANTHROPIC_API_KEY:
+    print("경고: ANTHROPIC_API_KEY 환경 변수가 설정되지 않았습니다.")
+
 # Anthropic 클라이언트 초기화
-anthropic_client = anthropic.Anthropic(
-    api_key=os.getenv('ANTHROPIC_API_KEY')
-)
-# 프로젝트 ID 설정
-PROJECT_ID = "nlp-ex"  # 실제 프로젝트 ID로 변경
-DATASET_ID = "test_dataset"
+try:
+    anthropic_client = anthropic.Anthropic(
+        api_key=ANTHROPIC_API_KEY
+    ) if ANTHROPIC_API_KEY else None
+except Exception as e:
+    print(f"Anthropic 클라이언트 초기화 실패: {e}")
+    anthropic_client = None
 
 # BigQuery 클라이언트 초기화 (ADC 사용)
-bigquery_client = bigquery.Client(project=PROJECT_ID)
+try:
+    bigquery_client = bigquery.Client()
+    PROJECT_ID = bigquery_client.project
+    print(f"BigQuery 프로젝트 ID: {PROJECT_ID}")
+except Exception as e:
+    print(f"BigQuery 클라이언트 초기화 실패: {e}")
+    PROJECT_ID = os.getenv('GOOGLE_CLOUD_PROJECT', 'your-project-id')
 
-# 샘플 테이블 스키마 정보 (실제 스키마로 수정 필요)
+# 샘플 테이블 스키마 정보 (수정된 버전)
 TABLE_SCHEMA = {
     "users": {
         "columns": [
@@ -44,10 +56,11 @@ TABLE_SCHEMA = {
 
 def get_schema_prompt():
     """테이블 스키마 정보를 프롬프트 형태로 변환"""
-    schema_text = "다음은 BigQuery 데이터베이스의 테이블 스키마 정보입니다:\n\n"
+    schema_text = f"다음은 BigQuery 데이터베이스의 테이블 스키마 정보입니다 (프로젝트: {PROJECT_ID}):\n\n"
     
     for table_name, table_info in TABLE_SCHEMA.items():
-        schema_text += f"테이블: {table_info['table_id']}\n"
+        full_table_name = f"`{PROJECT_ID}.test_dataset.{table_name}`"
+        schema_text += f"테이블: {full_table_name}\n"
         schema_text += "컬럼:\n"
         for column in table_info["columns"]:
             schema_text += f"  - {column['name']} ({column['type']}): {column['description']}\n"
@@ -57,6 +70,9 @@ def get_schema_prompt():
 
 def natural_language_to_sql(question):
     """자연어 질문을 BigQuery SQL로 변환"""
+    if not anthropic_client:
+        raise Exception("Anthropic 클라이언트가 초기화되지 않았습니다.")
+    
     schema_prompt = get_schema_prompt()
     
     system_prompt = f"""당신은 BigQuery SQL 전문가입니다. 사용자의 자연어 질문을 BigQuery SQL 쿼리로 변환해주세요.
@@ -65,14 +81,24 @@ def natural_language_to_sql(question):
 
 중요한 규칙:
 1. BigQuery 표준 SQL 문법을 사용해주세요.
-2. 테이블명 앞에 프로젝트와 데이터셋 이름을 붙이지 마세요. 단순히 테이블명만 사용하세요.
+2. 테이블 참조 시 반드시 백틱(`)을 사용하여 `{PROJECT_ID}.test_dataset.테이블명` 형식으로 사용하세요.
 3. 날짜 관련 함수는 BigQuery 함수를 사용하세요 (예: CURRENT_DATE(), DATE_SUB() 등).
 4. SQL 쿼리만 반환하고, 다른 설명은 포함하지 마세요.
 5. 쿼리는 반드시 세미콜론(;)으로 끝나야 합니다.
 
+사용 가능한 테이블:
+- `{PROJECT_ID}.test_dataset.users` (사용자 정보)
+- `{PROJECT_ID}.test_dataset.orders` (주문 정보)
+
 예시:
-질문: "최근 30일간 주문 건수가 많은 사용자 상위 10명을 보여주세요"
-답변: SELECT u.name, COUNT(o.order_id) as order_count FROM users u JOIN orders o ON u.user_id = o.user_id WHERE o.order_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) GROUP BY u.user_id, u.name ORDER BY order_count DESC LIMIT 10;"""
+질문: "사용자 수를 알려주세요"
+답변: SELECT COUNT(*) as user_count FROM `{PROJECT_ID}.test_dataset.users`;
+
+질문: "총 주문 수를 알려주세요"
+답변: SELECT COUNT(*) as total_orders FROM `{PROJECT_ID}.test_dataset.orders`;
+
+질문: "주문 상태별 개수를 보여주세요"
+답변: SELECT status, COUNT(*) as order_count FROM `{PROJECT_ID}.test_dataset.orders` GROUP BY status;"""
 
     try:
         response = anthropic_client.messages.create(
@@ -85,6 +111,7 @@ def natural_language_to_sql(question):
         )
         
         sql_query = response.content[0].text.strip()
+        print(f"생성된 SQL: {sql_query}")  # 디버깅용
         return sql_query
         
     except Exception as e:
@@ -93,6 +120,8 @@ def natural_language_to_sql(question):
 def execute_bigquery(sql_query):
     """BigQuery에서 SQL 쿼리 실행"""
     try:
+        print(f"실행할 SQL: {sql_query}")  # 디버깅용
+        
         # 쿼리 실행
         query_job = bigquery_client.query(sql_query)
         results = query_job.result()
@@ -182,8 +211,9 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
+        "project_id": PROJECT_ID,
         "services": {
-            "anthropic": "configured" if os.getenv('ANTHROPIC_API_KEY') else "not configured",
+            "anthropic": "configured" if ANTHROPIC_API_KEY else "not configured",
             "bigquery": "configured (using ADC)"
         }
     })
@@ -193,6 +223,7 @@ def get_schema():
     """테이블 스키마 정보 조회 엔드포인트"""
     return jsonify({
         "success": True,
+        "project_id": PROJECT_ID,
         "schema": TABLE_SCHEMA
     })
 
@@ -212,9 +243,11 @@ def internal_error(error):
 
 if __name__ == '__main__':
     # 환경 변수 확인
-    if not os.getenv('ANTHROPIC_API_KEY'):
+    if not ANTHROPIC_API_KEY:
         print("경고: ANTHROPIC_API_KEY 환경 변수가 설정되지 않았습니다.")
+    
+    print(f"프로젝트 ID: {PROJECT_ID}")
     
     # Cloud Run에서는 PORT 환경변수 사용
     port = int(os.getenv('PORT', 8080))
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(debug=True, host='0.0.0.0', port=port)
