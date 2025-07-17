@@ -5,6 +5,8 @@ import os
 import json
 from datetime import datetime
 
+app = Flask(__name__)
+
 @app.route('/')
 def index():
     """메인 페이지"""
@@ -14,8 +16,6 @@ def index():
 def static_files(filename):
     """정적 파일 서빙"""
     return send_from_directory('.', filename)
-
-app = Flask(__name__)
 
 # 환경 변수에서 API 키 읽기
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
