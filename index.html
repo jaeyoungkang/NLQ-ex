@@ -118,24 +118,38 @@
             transform: none;
         }
 
-        .api-config {
+        .example-questions {
             background: #f8f9fa;
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 20px;
+            border-left: 4px solid #4facfe;
         }
 
-        .api-config h3 {
+        .example-questions h3 {
             margin-bottom: 15px;
             color: #333;
+            font-size: 1.1rem;
         }
 
-        #apiUrl {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
+        .example-item {
+            background: white;
+            padding: 10px 15px;
+            margin: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #e1e5e9;
+        }
+
+        .example-item:hover {
+            background: #e8f4fd;
+            border-color: #4facfe;
+        }
+
+        .example-item code {
+            color: #2c5282;
+            font-size: 0.9rem;
         }
 
         .loading {
@@ -333,15 +347,24 @@
         </div>
 
         <div class="main-content">
-            <!-- API 설정 섹션 -->
-            <div class="api-config">
-                <h3>🔧 API 설정</h3>
-                <input 
-                    type="url" 
-                    id="apiUrl" 
-                    placeholder="백엔드 API URL을 입력하세요 (예: https://your-service-url.run.app)"
-                    value="http://localhost:5000"
-                >
+            <!-- 예시 질문들 -->
+            <div class="example-questions">
+                <h3>💡 예시 질문들 (클릭하면 자동 입력됩니다)</h3>
+                <div class="example-item" onclick="setQuestion('총 주문 수를 알려주세요')">
+                    <code>"총 주문 수를 알려주세요"</code>
+                </div>
+                <div class="example-item" onclick="setQuestion('주문 상태별 개수를 보여주세요')">
+                    <code>"주문 상태별 개수를 보여주세요"</code>
+                </div>
+                <div class="example-item" onclick="setQuestion('사용자별 주문 수를 보여주세요')">
+                    <code>"사용자별 주문 수를 보여주세요"</code>
+                </div>
+                <div class="example-item" onclick="setQuestion('가장 비싼 주문을 보여주세요')">
+                    <code>"가장 비싼 주문을 보여주세요"</code>
+                </div>
+                <div class="example-item" onclick="setQuestion('완료된 주문만 보여주세요')">
+                    <code>"완료된 주문만 보여주세요"</code>
+                </div>
             </div>
 
             <!-- 질문 입력 섹션 -->
@@ -350,7 +373,7 @@
                     <label for="questionInput">질문을 입력하세요</label>
                     <textarea 
                         id="questionInput" 
-                        placeholder="예: 최근 30일간 주문이 가장 많은 사용자 상위 10명을 보여주세요"
+                        placeholder="예: 서울에 사는 사용자의 주문을 보여주세요"
                         rows="4"
                     ></textarea>
                 </div>
@@ -377,7 +400,12 @@
         const submitBtn = document.getElementById('submitBtn');
         const loading = document.getElementById('loading');
         const resultsSection = document.getElementById('resultsSection');
-        const apiUrlInput = document.getElementById('apiUrl');
+
+        // 예시 질문 설정 함수
+        function setQuestion(question) {
+            questionInput.value = question;
+            questionInput.focus();
+        }
 
         // Enter 키로 질문 전송 (Ctrl+Enter)
         questionInput.addEventListener('keydown', function(e) {
@@ -392,7 +420,6 @@
         // 질문 전송 함수
         async function submitQuestion() {
             const question = questionInput.value.trim();
-            const apiUrl = apiUrlInput.value.trim();
 
             if (!question) {
                 alert('질문을 입력해주세요.');
@@ -400,18 +427,12 @@
                 return;
             }
 
-            if (!apiUrl) {
-                alert('API URL을 입력해주세요.');
-                apiUrlInput.focus();
-                return;
-            }
-
             // UI 상태 변경
             setLoadingState(true);
 
             try {
-                // API 호출
-                const response = await fetch(`${apiUrl}/query`, {
+                // API 호출 (현재 도메인 사용)
+                const response = await fetch('/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -541,7 +562,7 @@
                 <div class="error">
                     <h3>❌ 오류 발생</h3>
                     <p>${escapeHtml(errorMessage)}</p>
-                    <p><small>API URL과 네트워크 연결을 확인해주세요.</small></p>
+                    <p><small>서버 로그를 확인하거나 다른 질문을 시도해보세요.</small></p>
                 </div>
             `;
 
@@ -558,7 +579,7 @@
         // 예시 질문 자동 완성
         const exampleQuestions = [
             "사용자 수를 알려주세요",
-            "최근 30일간 주문 건수가 많은 사용자 상위 10명을 보여주세요",
+            "최근 주문을 보여주세요",
             "도시별 사용자 수를 보여주세요",
             "월별 주문 금액 합계를 보여주세요",
             "취소된 주문의 개수를 알려주세요"
