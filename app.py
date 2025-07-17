@@ -11,9 +11,12 @@ app = Flask(__name__)
 anthropic_client = anthropic.Anthropic(
     api_key=os.getenv('ANTHROPIC_API_KEY')
 )
+# 프로젝트 ID 설정
+PROJECT_ID = "nlp-ex"  # 실제 프로젝트 ID로 변경
+DATASET_ID = "test_dataset"
 
 # BigQuery 클라이언트 초기화 (ADC 사용)
-bigquery_client = bigquery.Client()
+bigquery_client = bigquery.Client(project=PROJECT_ID)
 
 # 샘플 테이블 스키마 정보 (실제 스키마로 수정 필요)
 TABLE_SCHEMA = {
@@ -44,7 +47,7 @@ def get_schema_prompt():
     schema_text = "다음은 BigQuery 데이터베이스의 테이블 스키마 정보입니다:\n\n"
     
     for table_name, table_info in TABLE_SCHEMA.items():
-        schema_text += f"테이블: {table_name}\n"
+        schema_text += f"테이블: {table_info['table_id']}\n"
         schema_text += "컬럼:\n"
         for column in table_info["columns"]:
             schema_text += f"  - {column['name']} ({column['type']}): {column['description']}\n"
