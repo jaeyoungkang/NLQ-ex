@@ -227,34 +227,26 @@ def execute_bigquery(sql_query):
     try:
         query_job = bigquery_client.query(sql_query)
         results = query_job.result()
+        debug_bigquery_result(results)
         
         rows = []
-        # 기존 코드를 다음으로 교체
         for row in results:
-            try:
-                # 1. 먼저 타입 확인
-                if isinstance(row, str):
-                    rows.append({"error": "Row is string", "content": row})
-                    continue
-                
-                # 2. 딕셔너리 변환 시도
-                if hasattr(row, '_asdict'):
-                    row_dict = dict(row._asdict())
+            # 안전한 변환
+            row_dict = safe_row_to_dict(row)
+            
+            # 타입 정규화
+            normalized_row = {}
+            for key, value in row_dict.items():
+                if isinstance(value, datetime):
+                    normalized_row[key] = value.isoformat()
+                elif hasattr(value, 'isoformat'):
+                    normalized_row[key] = value.isoformat()
+                elif value is None:
+                    normalized_row[key] = None
                 else:
-                    row_dict = dict(row)
-                
-                # 3. 안전한 타입 변환
-                safe_row = {}
-                for k, v in row_dict.items():
-                    if isinstance(v, datetime):
-                        safe_row[k] = v.isoformat()
-                    else:
-                        safe_row[k] = v
-                
-                rows.append(safe_row)
-                
-            except Exception as e:
-                rows.append({"conversion_error": str(e), "raw_row": str(row)})
+                    normalized_row[key] = value
+            
+            rows.append(normalized_row)
         
         return {
             "success": True,
