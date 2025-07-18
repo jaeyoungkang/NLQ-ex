@@ -68,7 +68,6 @@ TABLE_SCHEMA = {
             {"name": "stream_id", "type": "STRING", "description": "스트림 ID"},
             {"name": "platform", "type": "STRING", "description": "플랫폼 (WEB, IOS, ANDROID)"},
             {"name": "event_params", "type": "RECORD", "description": "이벤트 매개변수 (중첩된 키-값 쌍)"},
-            {"name": "user_ltv", "type": "RECORD", "description": "사용자 생애가치"},
             {"name": "ecommerce", "type": "RECORD", "description": "전자상거래 정보 (purchase_revenue, items 등)"},
             {"name": "items", "type": "RECORD", "description": "상품 정보 배열 (item_id, item_name, price 등)"}
         ],
@@ -226,9 +225,73 @@ def execute_bigquery(sql_query):
             "data": []
         }
 
+def generate_analysis_report(question, sql_query, query_results, max_rows_for_analysis=100):
+    """쿼리 결과를 Claude에게 보내서 분석 리포트 생성"""
+    if not anthropic_client:
+        raise Exception("Anthropic 클라이언트가 초기화되지 않았습니다.")
+    
+    if not query_results or len(query_results) == 0:
+        return "분석할 데이터가 없습니다."
+    
+    # 데이터가 너무 많으면 샘플링
+    sample_data = query_results[:max_rows_for_analysis] if len(query_results) > max_rows_for_analysis else query_results
+    
+    # 데이터 요약 정보 생성
+    data_summary = {
+        "total_rows": len(query_results),
+        "sample_rows": len(sample_data),
+        "columns": list(sample_data[0].keys()) if sample_data else [],
+        "sample_data": sample_data[:10]  # 처음 10개 행만 샘플로
+    }
+    
+    analysis_prompt = f"""다음은 GA4 데이터 분석 결과입니다. 이 데이터를 분석하여 인사이트가 풍부한 리포트를 작성해주세요.
+
+**원본 질문:** {question}
+
+**실행된 SQL 쿼리:**
+```sql
+{sql_query}
+```
+
+**데이터 요약:**
+- 총 행 수: {data_summary['total_rows']:,}개
+- 분석 대상: {data_summary['sample_rows']:,}개 행
+- 컬럼: {', '.join(data_summary['columns'])}
+
+**샘플 데이터 (상위 10개 행):**
+{json.dumps(data_summary['sample_data'], indent=2, ensure_ascii=False, default=str)}
+
+**분석 요청사항:**
+1. 핵심 인사이트 3-5개를 도출해주세요
+2. 데이터의 패턴이나 트렌드를 분석해주세요
+3. 비즈니스 관점에서의 시사점을 제시해주세요
+4. 추가 분석이 필요한 영역이 있다면 제안해주세요
+5. 데이터 품질이나 특이사항이 있다면 언급해주세요
+
+**리포트 형식:**
+- 한국어로 작성
+- 구조화된 마크다운 형식
+- 구체적인 수치와 함께 설명
+- 실행 가능한 제안사항 포함"""
+
+    try:
+        response = anthropic_client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=2000,
+            messages=[
+                {"role": "user", "content": analysis_prompt}
+            ]
+        )
+        
+        analysis_report = response.content[0].text.strip()
+        return analysis_report
+        
+    except Exception as e:
+        raise Exception(f"분석 리포트 생성 중 오류 발생: {str(e)}")
+
 @app.route('/query', methods=['POST'])
 def process_natural_language_query():
-    """자연어 질의 처리 API 엔드포인트"""
+    """자연어 질의 처리 API 엔드포인트 (분석 옵션 추가)"""
     try:
         # 요청 데이터 검증
         if not request.json or 'question' not in request.json:
@@ -238,6 +301,7 @@ def process_natural_language_query():
             }), 400
         
         question = request.json['question']
+        include_analysis = request.json.get('include_analysis', False)  # 기본값은 False
         
         if not question.strip():
             return jsonify({
@@ -269,6 +333,89 @@ def process_natural_language_query():
         if not query_result["success"]:
             response["error"] = query_result["error"]
             return jsonify(response), 500
+        
+        # 3단계: 분석 리포트 생성 (요청된 경우만)
+        if include_analysis and query_result["data"]:
+            try:
+                analysis_report = generate_analysis_report(
+                    question, 
+                    sql_query, 
+                    query_result["data"]
+                )
+                response["analysis_report"] = analysis_report
+            except Exception as e:
+                response["analysis_error"] = f"분석 리포트 생성 실패: {str(e)}"
+        
+        return jsonify(response), 200
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"서버 오류: {str(e)}"
+        }), 500
+
+@app.route('/analyze', methods=['POST'])
+def analyze_query_results():
+    """쿼리 결과 분석 API 엔드포인트"""
+    try:
+        # 요청 데이터 검증
+        if not request.json or 'question' not in request.json:
+            return jsonify({
+                "success": False,
+                "error": "요청 본문에 'question' 필드가 필요합니다."
+            }), 400
+        
+        question = request.json['question']
+        include_analysis = request.json.get('include_analysis', True)
+        
+        if not question.strip():
+            return jsonify({
+                "success": False,
+                "error": "질문이 비어있습니다."
+            }), 400
+        
+        # 1단계: 자연어를 SQL로 변환
+        try:
+            sql_query = natural_language_to_sql(question)
+        except Exception as e:
+            return jsonify({
+                "success": False,
+                "error": f"SQL 변환 중 오류: {str(e)}"
+            }), 500
+        
+        # 2단계: BigQuery에서 SQL 실행
+        query_result = execute_bigquery(sql_query)
+        
+        if not query_result["success"]:
+            return jsonify({
+                "success": False,
+                "error": query_result["error"],
+                "original_question": question,
+                "generated_sql": sql_query
+            }), 500
+        
+        # 3단계: 분석 리포트 생성 (옵션)
+        analysis_report = None
+        if include_analysis and query_result["data"]:
+            try:
+                analysis_report = generate_analysis_report(
+                    question, 
+                    sql_query, 
+                    query_result["data"]
+                )
+            except Exception as e:
+                print(f"분석 리포트 생성 실패: {e}")
+                analysis_report = f"분석 리포트 생성 중 오류 발생: {str(e)}"
+        
+        # 응답 구성
+        response = {
+            "success": True,
+            "original_question": question,
+            "generated_sql": sql_query,
+            "data": query_result["data"],
+            "row_count": query_result.get("row_count", 0),
+            "analysis_report": analysis_report
+        }
         
         return jsonify(response), 200
         
