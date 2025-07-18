@@ -225,24 +225,78 @@ def execute_bigquery(sql_query):
             "data": []
         }
 
+def suggest_chart_config(data, columns):
+    """데이터 구조를 분석하여 적절한 차트 설정 제안"""
+    if not data or len(data) == 0:
+        return None
+    
+    # 컬럼 개수에 따른 차트 타입 결정
+    if len(columns) == 1:
+        return None  # 단일 컬럼은 차트로 표현하기 어려움
+    
+    if len(columns) == 2:
+        # 2개 컬럼인 경우
+        col1, col2 = columns[0], columns[1]
+        
+        # 첫 번째 값으로 데이터 타입 판단
+        first_val1 = data[0][col1] if data[0][col1] is not None else ""
+        first_val2 = data[0][col2] if data[0][col2] is not None else 0
+        
+        # 두 번째 컬럼이 숫자인 경우
+        if isinstance(first_val2, (int, float)):
+            # 첫 번째 컬럼이 카테고리인 경우
+            if isinstance(first_val1, str):
+                return {
+                    "type": "bar",
+                    "label_column": col1,
+                    "value_column": col2,
+                    "title": f"{col1}별 {col2}"
+                }
+    
+    # 3개 이상 컬럼인 경우 첫 번째는 라벨, 나머지는 값으로 가정
+    if len(columns) >= 3:
+        label_col = columns[0]
+        value_cols = columns[1:]
+        
+        # 모든 값 컬럼이 숫자인지 확인
+        all_numeric = True
+        for col in value_cols:
+            if data[0][col] is not None and not isinstance(data[0][col], (int, float)):
+                all_numeric = False
+                break
+        
+        if all_numeric:
+            return {
+                "type": "line" if len(value_cols) > 1 else "bar",
+                "label_column": label_col,
+                "value_columns": value_cols,
+                "title": f"{label_col}별 데이터 비교"
+            }
+    
+    return None
+
 def generate_analysis_report(question, sql_query, query_results, max_rows_for_analysis=100):
-    """쿼리 결과를 Claude에게 보내서 분석 리포트 생성"""
+    """쿼리 결과를 Claude에게 보내서 분석 리포트 생성 (차트 포함)"""
     if not anthropic_client:
         raise Exception("Anthropic 클라이언트가 초기화되지 않았습니다.")
     
     if not query_results or len(query_results) == 0:
-        return "분석할 데이터가 없습니다."
+        return {"report": "분석할 데이터가 없습니다.", "chart_config": None}
     
     # 데이터가 너무 많으면 샘플링
     sample_data = query_results[:max_rows_for_analysis] if len(query_results) > max_rows_for_analysis else query_results
     
     # 데이터 요약 정보 생성
+    columns = list(sample_data[0].keys()) if sample_data else []
     data_summary = {
         "total_rows": len(query_results),
         "sample_rows": len(sample_data),
-        "columns": list(sample_data[0].keys()) if sample_data else [],
+        "columns": columns,
         "sample_data": sample_data[:10]  # 처음 10개 행만 샘플로
     }
+    
+    # 차트 설정 제안
+    chart_config = suggest_chart_config(query_results, columns)
     
     analysis_prompt = f"""다음은 GA4 데이터 분석 결과입니다. 이 데이터를 분석하여 인사이트가 풍부한 리포트를 작성해주세요.
 
@@ -261,17 +315,22 @@ def generate_analysis_report(question, sql_query, query_results, max_rows_for_an
 **샘플 데이터 (상위 10개 행):**
 {json.dumps(data_summary['sample_data'], indent=2, ensure_ascii=False, default=str)}
 
+**차트 생성 정보:**
+{f"이 데이터는 {chart_config['type']} 차트로 시각화될 예정입니다." if chart_config else "이 데이터는 차트로 시각화하기 어려운 구조입니다."}
+
 **분석 요청사항:**
 1. 핵심 인사이트 3-5개를 도출해주세요
 2. 데이터의 패턴이나 트렌드를 분석해주세요
 3. 비즈니스 관점에서의 시사점을 제시해주세요
-4. 추가 분석이 필요한 영역이 있다면 제안해주세요
-5. 데이터 품질이나 특이사항이 있다면 언급해주세요
+4. 차트가 생성되는 경우, 차트에서 주목해야 할 포인트를 언급해주세요
+5. 추가 분석이 필요한 영역이 있다면 제안해주세요
+6. 데이터 품질이나 특이사항이 있다면 언급해주세요
 
 **리포트 형식:**
 - 한국어로 작성
 - 구조화된 마크다운 형식
 - 구체적인 수치와 함께 설명
+- 차트 해석 포함 (차트가 있는 경우)
 - 실행 가능한 제안사항 포함"""
 
     try:
@@ -284,7 +343,11 @@ def generate_analysis_report(question, sql_query, query_results, max_rows_for_an
         )
         
         analysis_report = response.content[0].text.strip()
-        return analysis_report
+        
+        return {
+            "report": analysis_report,
+            "chart_config": chart_config
+        }
         
     except Exception as e:
         raise Exception(f"분석 리포트 생성 중 오류 발생: {str(e)}")
@@ -337,12 +400,13 @@ def process_natural_language_query():
         # 3단계: 분석 리포트 생성 (요청된 경우만)
         if include_analysis and query_result["data"]:
             try:
-                analysis_report = generate_analysis_report(
+                analysis_result = generate_analysis_report(
                     question, 
                     sql_query, 
                     query_result["data"]
                 )
-                response["analysis_report"] = analysis_report
+                response["analysis_report"] = analysis_result["report"]
+                response["chart_config"] = analysis_result["chart_config"]
             except Exception as e:
                 response["analysis_error"] = f"분석 리포트 생성 실패: {str(e)}"
         
@@ -396,13 +460,16 @@ def analyze_query_results():
         
         # 3단계: 분석 리포트 생성 (옵션)
         analysis_report = None
+        chart_config = None
         if include_analysis and query_result["data"]:
             try:
-                analysis_report = generate_analysis_report(
+                analysis_result = generate_analysis_report(
                     question, 
                     sql_query, 
                     query_result["data"]
                 )
+                analysis_report = analysis_result["report"]
+                chart_config = analysis_result["chart_config"]
             except Exception as e:
                 print(f"분석 리포트 생성 실패: {e}")
                 analysis_report = f"분석 리포트 생성 중 오류 발생: {str(e)}"
@@ -414,7 +481,8 @@ def analyze_query_results():
             "generated_sql": sql_query,
             "data": query_result["data"],
             "row_count": query_result.get("row_count", 0),
-            "analysis_report": analysis_report
+            "analysis_report": analysis_report,
+            "chart_config": chart_config
         }
         
         return jsonify(response), 200

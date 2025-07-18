@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GA4 데이터 자연어 질의 & 분석</title>
+    <!-- Chart.js 라이브러리 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -366,11 +368,30 @@
             color: #2c5282;
         }
 
-        .analysis-report code {
-            background: #e2e8f0;
-            padding: 2px 4px;
-            border-radius: 3px;
-            font-family: monospace;
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e1e5e9;
+        }
+
+        .chart-container h4 {
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+
+        #analysisChart {
+            max-height: 400px;
         }
 
         .table-container {
@@ -745,6 +766,14 @@
 
                 ${hasAnalysis && data.analysis_report ? `
                 <div class="tab-content" id="tab-analysis">
+                    ${data.chart_config ? `
+                    <div class="chart-container">
+                        <h4>${data.chart_config.title || '데이터 시각화'}</h4>
+                        <div class="chart-wrapper">
+                            <canvas id="analysisChart"></canvas>
+                        </div>
+                    </div>
+                    ` : ''}
                     <div class="analysis-report">
                         ${parseMarkdown(data.analysis_report)}
                     </div>
@@ -760,8 +789,134 @@
             `;
 
             resultsSection.innerHTML = resultHtml;
+            
+            // 차트 생성 (분석 모드이고 차트 설정이 있는 경우)
+            if (hasAnalysis && data.chart_config) {
+                setTimeout(() => createChart(data.data, data.chart_config), 100);
+            }
         }
 
+        // 차트 생성 함수
+        let currentChart = null;
+        
+        function createChart(data, config) {
+            const canvas = document.getElementById('analysisChart');
+            if (!canvas || !data || data.length === 0) return;
+            
+            // 기존 차트 제거
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            const ctx = canvas.getContext('2d');
+            
+            let chartData = {};
+            let chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: config.title || '데이터 시각화'
+                    }
+                }
+            };
+            
+            if (config.type === 'bar' && config.label_column && config.value_column) {
+                // 막대 차트
+                const labels = data.map(row => String(row[config.label_column]));
+                const values = data.map(row => Number(row[config.value_column]) || 0);
+                
+                chartData = {
+                    labels: labels,
+                    datasets: [{
+                        label: config.value_column,
+                        data: values,
+                        backgroundColor: [
+                            'rgba(66, 133, 244, 0.8)',
+                            'rgba(52, 168, 83, 0.8)',
+                            'rgba(251, 188, 5, 0.8)',
+                            'rgba(234, 67, 53, 0.8)',
+                            'rgba(156, 39, 176, 0.8)',
+                            'rgba(255, 152, 0, 0.8)',
+                            'rgba(0, 172, 193, 0.8)',
+                            'rgba(76, 175, 80, 0.8)',
+                            'rgba(233, 30, 99, 0.8)',
+                            'rgba(121, 85, 72, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(66, 133, 244, 1)',
+                            'rgba(52, 168, 83, 1)',
+                            'rgba(251, 188, 5, 1)',
+                            'rgba(234, 67, 53, 1)',
+                            'rgba(156, 39, 176, 1)',
+                            'rgba(255, 152, 0, 1)',
+                            'rgba(0, 172, 193, 1)',
+                            'rgba(76, 175, 80, 1)',
+                            'rgba(233, 30, 99, 1)',
+                            'rgba(121, 85, 72, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                };
+                
+                chartOptions.scales = {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString();
+                            }
+                        }
+                    }
+                };
+                
+            } else if (config.type === 'line' && config.label_column && config.value_columns) {
+                // 선 차트 (다중 데이터)
+                const labels = data.map(row => String(row[config.label_column]));
+                const datasets = config.value_columns.map((col, index) => {
+                    const colors = [
+                        'rgba(66, 133, 244, 1)',
+                        'rgba(52, 168, 83, 1)',
+                        'rgba(251, 188, 5, 1)',
+                        'rgba(234, 67, 53, 1)',
+                        'rgba(156, 39, 176, 1)'
+                    ];
+                    
+                    return {
+                        label: col,
+                        data: data.map(row => Number(row[col]) || 0),
+                        borderColor: colors[index % colors.length],
+                        backgroundColor: colors[index % colors.length].replace('1)', '0.2)'),
+                        tension: 0.1,
+                        fill: false
+                    };
+                });
+                
+                chartData = { labels, datasets };
+                
+                chartOptions.scales = {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toLocaleString();
+                            }
+                        }
+                    }
+                };
+            }
+            
+            // 차트 생성
+            currentChart = new Chart(ctx, {
+                type: config.type,
+                data: chartData,
+                options: chartOptions
+            });
+        }
         // 탭 전환 함수
         function showTab(tabName) {
             // 모든 탭 버튼과 컨텐츠 비활성화
@@ -771,6 +926,11 @@
             // 선택된 탭 활성화
             event.target.classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            // 분석 탭이 활성화되고 차트가 있는 경우 차트 리사이즈
+            if (tabName === 'analysis' && currentChart) {
+                setTimeout(() => currentChart.resize(), 100);
+            }
         }
 
         // 마크다운 파싱 (간단한 버전)
