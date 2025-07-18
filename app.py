@@ -31,14 +31,17 @@ except Exception as e:
     print(f"Anthropic 클라이언트 초기화 실패: {e}")
     anthropic_client = None
 
-# BigQuery 클라이언트 초기화 (ADC 사용)
+# 프로젝트 ID 명시적 설정
+PROJECT_ID = "nlq-ex"
+
+# BigQuery 클라이언트 초기화 (프로젝트 ID 명시)
 try:
-    bigquery_client = bigquery.Client()
-    PROJECT_ID = bigquery_client.project
+    bigquery_client = bigquery.Client(project=PROJECT_ID)
     print(f"BigQuery 프로젝트 ID: {PROJECT_ID}")
+    print(f"BigQuery 클라이언트 프로젝트: {bigquery_client.project}")
 except Exception as e:
     print(f"BigQuery 클라이언트 초기화 실패: {e}")
-    PROJECT_ID = os.getenv('GOOGLE_CLOUD_PROJECT', 'your-project-id')
+    bigquery_client = None
 
 # GA4 Events 테이블 스키마 정보
 TABLE_SCHEMA = {
@@ -190,6 +193,7 @@ def execute_bigquery(sql_query):
     """BigQuery에서 SQL 쿼리 실행"""
     try:
         print(f"실행할 SQL: {sql_query}")  # 디버깅용
+        print(f"사용 중인 프로젝트 ID: {bigquery_client.project}")  # 디버깅용
         
         # 쿼리 실행
         query_job = bigquery_client.query(sql_query)
@@ -282,9 +286,10 @@ def health_check():
         "timestamp": datetime.now().isoformat(),
         "project_id": PROJECT_ID,
         "table": f"{PROJECT_ID}.test_dataset.events_20201121",
+        "bigquery_client_project": bigquery_client.project if bigquery_client else "Not initialized",
         "services": {
             "anthropic": "configured" if ANTHROPIC_API_KEY else "not configured",
-            "bigquery": "configured (using ADC)"
+            "bigquery": "configured (using ADC)" if bigquery_client else "not configured"
         }
     })
 
@@ -316,6 +321,9 @@ if __name__ == '__main__':
     # 환경 변수 확인
     if not ANTHROPIC_API_KEY:
         print("경고: ANTHROPIC_API_KEY 환경 변수가 설정되지 않았습니다.")
+    
+    if not bigquery_client:
+        print("경고: BigQuery 클라이언트가 초기화되지 않았습니다.")
     
     print(f"프로젝트 ID: {PROJECT_ID}")
     print(f"테이블: {PROJECT_ID}.test_dataset.events_20201121")
