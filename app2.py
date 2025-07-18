@@ -229,10 +229,9 @@ def execute_bigquery(sql_query):
     try:
         query_job = bigquery_client.query(sql_query)
         print("bigquery_client.query")
-        results = query_job.result()
-        print("results = query_job.result()")
+
         rows = []
-        for row in results:
+        for row in query_job.result():
             # 안전한 변환
             row_dict = safe_row_to_dict(row)
             print(f"Row 변환 성공: {row_dict}")
