@@ -3,6 +3,7 @@ from google.cloud import bigquery
 import anthropic
 import os
 import json
+import re
 from datetime import datetime
 
 app = Flask(__name__)
@@ -449,150 +450,371 @@ def generate_analysis_report(question, sql_query, query_results, max_rows_for_an
     except Exception as e:
         raise Exception(f"분석 리포트 생성 중 오류 발생: {str(e)}")
 
-@app.route('/query', methods=['POST'])
-def process_natural_language_query():
-    """자연어 질의 처리 API 엔드포인트 (분석 옵션 추가)"""
-    try:
-        # 요청 데이터 검증
-        if not request.json or 'question' not in request.json:
-            return jsonify({
-                "success": False,
-                "error": "요청 본문에 'question' 필드가 필요합니다."
-            }), 400
-        
-        question = request.json['question']
-        include_analysis = request.json.get('include_analysis', False)  # 기본값은 False
-        
-        if not question.strip():
-            return jsonify({
-                "success": False,
-                "error": "질문이 비어있습니다."
-            }), 400
-        
-        # 1단계: 자연어를 SQL로 변환
-        try:
-            sql_query = natural_language_to_sql(question)
-        except Exception as e:
-            return jsonify({
-                "success": False,
-                "error": f"SQL 변환 중 오류: {str(e)}"
-            }), 500
-        
-        # 2단계: BigQuery에서 SQL 실행
-        query_result = execute_bigquery(sql_query)
-        
-        # 응답 구성
-        response = {
-            "success": query_result["success"],
-            "original_question": question,
-            "generated_sql": sql_query,
-            "data": query_result["data"],
-            "row_count": query_result.get("row_count", 0)
-        }
-        
-        if not query_result["success"]:
-            response["error"] = query_result["error"]
-            return jsonify(response), 500
-        
-        # 3단계: 분석 리포트 생성 (요청된 경우만)
-        if include_analysis and query_result["data"]:
-            try:
-                analysis_result = generate_analysis_report(
-                    question, 
-                    sql_query, 
-                    query_result["data"]
-                )
-                response["analysis_report"] = analysis_result["report"]
-                response["chart_config"] = analysis_result["chart_config"]
-                response["data_summary"] = analysis_result["data_summary"]
-            except Exception as e:
-                response["analysis_error"] = f"분석 리포트 생성 실패: {str(e)}"
-        
-        return jsonify(response), 200
-        
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": f"서버 오류: {str(e)}"
-        }), 500
+def validate_claude_html(html_content):
+    """Claude 생성 HTML 품질 검증"""
+    issues = []
+    
+    # 기본 HTML 구조 검증
+    if not html_content.strip().startswith('<!DOCTYPE'):
+        issues.append("DOCTYPE 선언 누락")
+    
+    # Chart.js 링크 확인
+    if 'Chart.js' in html_content and 'cdnjs.cloudflare.com' not in html_content:
+        issues.append("Chart.js CDN 링크 누락")
+    
+    # 위험한 스크립트 패턴 확인
+    dangerous_patterns = ['document.location', 'window.location', 'eval(', 'innerHTML']
+    for pattern in dangerous_patterns:
+        if pattern in html_content:
+            issues.append(f"위험한 패턴 감지: {pattern}")
+    
+    # JavaScript 문법 간단 검증
+    if 'new Chart(' in html_content and 'ctx' not in html_content:
+        issues.append("Chart.js 컨텍스트 설정 누락")
+    
+    return {
+        "is_valid": len(issues) == 0,
+        "issues": issues,
+        "score": max(0, 100 - len(issues) * 20)  # 품질 점수
+    }
 
-@app.route('/analyze', methods=['POST'])
-def analyze_query_results():
-    """쿼리 결과 분석 API 엔드포인트"""
-    try:
-        # 요청 데이터 검증
-        if not request.json or 'question' not in request.json:
-            return jsonify({
-                "success": False,
-                "error": "요청 본문에 'question' 필드가 필요합니다."
-            }), 400
+def generate_fallback_html(question, query_results):
+    """HTML 생성 실패 시 폴백 HTML"""
+    return f"""
+    <!DOCTYPE html>
+    <html lang="ko">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{question} - 분석 결과</title>
+        <style>
+            body {{ font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+            .container {{ max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
+            .header {{ text-align: center; margin-bottom: 30px; color: #333; }}
+            .data-table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+            .data-table th {{ background: #4285f4; color: white; padding: 12px; text-align: left; }}
+            .data-table td {{ padding: 10px; border-bottom: 1px solid #ddd; }}
+            .summary {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📊 {question}</h1>
+                <p>GA4 데이터 분석 결과 • {len(query_results)}개 결과</p>
+            </div>
+            
+            <div class="summary">
+                <h3>📋 데이터 요약</h3>
+                <p>총 {len(query_results)}개의 레코드가 조회되었습니다.</p>
+            </div>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        {''.join([f'<th>{col}</th>' for col in query_results[0].keys() if query_results])}
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join([f"<tr>{''.join([f'<td>{row[col]}</td>' for col in row.keys()])}</tr>" for row in query_results[:10]])}
+                </tbody>
+            </table>
+            
+            <div class="summary">
+                <p><em>고급 HTML 리포트 생성에 실패하여 기본 형태로 표시됩니다.</em></p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+def generate_html_analysis_report(question, sql_query, query_results):
+    """Claude가 완전한 HTML 분석 리포트 생성 (검증 포함)"""
+    if not anthropic_client:
+        raise Exception("Anthropic 클라이언트가 초기화되지 않았습니다.")
+    
+    if not query_results or len(query_results) == 0:
+        return generate_fallback_html(question, [])
+    
+    # 데이터 준비
+    sample_data = query_results[:10]
+    columns = list(sample_data[0].keys()) if sample_data else []
+    
+    # Chart.js용 데이터 변환
+    chart_data = []
+    chart_labels = []
+    if len(columns) >= 2:
+        chart_labels = [str(row[columns[0]]) for row in sample_data]
+        if len(columns) == 2 and isinstance(sample_data[0][columns[1]], (int, float)):
+            chart_data = [row[columns[1]] for row in sample_data]
+
+    analysis_prompt = f"""다음 GA4 데이터 분석 결과를 완전한 HTML 페이지로 생성해주세요.
+
+**원본 질문:** {question}
+
+**실행된 SQL:**
+```sql
+{sql_query}
+```
+
+**데이터 정보:**
+- 총 행 수: {len(query_results)}개
+- 컬럼: {', '.join(columns)}
+
+**샘플 데이터:**
+{json.dumps(sample_data, indent=2, ensure_ascii=False, default=str)}
+
+**차트 데이터:**
+- Labels: {chart_labels}
+- Data: {chart_data}
+
+다음 요구사항에 맞는 완전한 HTML을 생성해주세요:
+
+1. **완전히 독립적인 HTML 파일** (DOCTYPE부터 </html>까지)
+2. **Chart.js 차트 포함** (CDN: https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js)
+3. **Google 브랜드 컬러** (#4285f4, #34a853 등)
+4. **반응형 디자인** (모바일 대응)
+5. **구조화된 분석 리포트** (핵심 인사이트, 통계, 비즈니스 시사점)
+
+HTML 구조 예시:
+```html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{question} - GA4 분석 리포트</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {{ font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
+        .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
+        .header {{ text-align: center; margin-bottom: 30px; }}
+        .summary-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }}
+        .summary-card {{ background: linear-gradient(135deg, #4285f4, #34a853); color: white; padding: 20px; border-radius: 8px; text-align: center; }}
+        .chart-container {{ margin: 30px 0; }}
+        .analysis-section {{ margin: 30px 0; }}
+        .insight-item {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-left: 4px solid #4285f4; border-radius: 4px; }}
+        @media (max-width: 768px) {{ .container {{ padding: 15px; }} .summary-grid {{ grid-template-columns: 1fr; }} }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 {question}</h1>
+            <p>GA4 데이터 분석 리포트 • {len(query_results)}개 결과</p>
+        </div>
         
-        question = request.json['question']
-        include_analysis = request.json.get('include_analysis', True)
+        <!-- 요약 카드들 자동 생성 -->
+        <div class="summary-grid">
+            <!-- 데이터 기반 요약 정보 -->
+        </div>
         
-        if not question.strip():
-            return jsonify({
-                "success": False,
-                "error": "질문이 비어있습니다."
-            }), 400
+        <!-- 차트 섹션 -->
+        <div class="chart-container">
+            <h2>📈 데이터 시각화</h2>
+            <canvas id="analysisChart" style="max-height: 400px;"></canvas>
+        </div>
         
-        # 1단계: 자연어를 SQL로 변환
+        <!-- 분석 리포트 -->
+        <div class="analysis-section">
+            <h2>🎯 핵심 인사이트</h2>
+            <!-- 구체적인 분석 내용 -->
+        </div>
+    </div>
+    
+    <script>
+        // Chart.js 코드 자동 생성
+        const ctx = document.getElementById('analysisChart').getContext('2d');
+        new Chart(ctx, {{
+            // 데이터에 맞는 차트 설정
+        }});
+    </script>
+</body>
+</html>
+```
+
+중요 사항:
+- 실제 데이터 값을 활용한 구체적인 인사이트 제공
+- 작동하는 Chart.js 코드 포함
+- 모든 스타일을 인라인으로 포함
+- 한국어로 자연스러운 분석 내용 작성
+- 비즈니스 관점의 실용적인 제안사항 포함
+
+완전한 HTML 코드만 반환해주세요."""
+
+    max_attempts = 2
+    
+    for attempt in range(max_attempts):
         try:
-            sql_query = natural_language_to_sql(question)
+            response = anthropic_client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=4000,
+                messages=[
+                    {"role": "user", "content": analysis_prompt}
+                ]
+            )
+            
+            html_content = response.content[0].text.strip()
+            
+            # HTML 태그 확인 및 정리
+            if not html_content.startswith('<!DOCTYPE') and not html_content.startswith('<html'):
+                # Claude가 마크다운 블록으로 감쌌을 수 있음
+                if '```html' in html_content:
+                    html_content = html_content.split('```html')[1].split('```')[0].strip()
+                elif '```' in html_content:
+                    html_content = html_content.split('```')[1].strip()
+            
+            # HTML 품질 검증
+            validation = validate_claude_html(html_content)
+            
+            if validation["is_valid"] or validation["score"] >= 70:
+                return {
+                    "html_content": html_content,
+                    "quality_score": validation["score"],
+                    "attempts": attempt + 1,
+                    "issues": validation["issues"]
+                }
+            
+            if attempt < max_attempts - 1:
+                print(f"HTML 품질 개선 필요 (점수: {validation['score']}), 재시도 중...")
+                
         except Exception as e:
-            return jsonify({
-                "success": False,
-                "error": f"SQL 변환 중 오류: {str(e)}"
-            }), 500
+            print(f"HTML 생성 시도 {attempt + 1} 실패: {str(e)}")
+    
+    # 모든 시도 실패 시 폴백
+    return {
+        "html_content": generate_fallback_html(question, query_results),
+        "quality_score": 60,
+        "attempts": max_attempts,
+        "fallback": True
+    }
+
+# API 엔드포인트들
+
+@app.route('/quick', methods=['POST'])
+def quick_query():
+    """빠른 조회 - 데이터만 반환"""
+    try:
+        question = request.json['question']
         
-        # 2단계: BigQuery에서 SQL 실행
+        # SQL 생성 및 데이터 조회
+        sql_query = natural_language_to_sql(question)
         query_result = execute_bigquery(sql_query)
         
         if not query_result["success"]:
             return jsonify({
                 "success": False,
                 "error": query_result["error"],
-                "original_question": question,
-                "generated_sql": sql_query
+                "mode": "quick"
             }), 500
         
-        # 3단계: 분석 리포트 생성 (옵션)
-        analysis_report = None
-        chart_config = None
-        data_summary = None
-        if include_analysis and query_result["data"]:
-            try:
-                analysis_result = generate_analysis_report(
-                    question, 
-                    sql_query, 
-                    query_result["data"]
-                )
-                analysis_report = analysis_result["report"]
-                chart_config = analysis_result["chart_config"]
-                data_summary = analysis_result["data_summary"]
-            except Exception as e:
-                print(f"분석 리포트 생성 실패: {e}")
-                analysis_report = f"분석 리포트 생성 중 오류 발생: {str(e)}"
-        
-        # 응답 구성
-        response = {
+        return jsonify({
             "success": True,
+            "mode": "quick",
             "original_question": question,
             "generated_sql": sql_query,
             "data": query_result["data"],
-            "row_count": query_result.get("row_count", 0),
-            "analysis_report": analysis_report,
-            "chart_config": chart_config,
-            "data_summary": data_summary
-        }
-        
-        return jsonify(response), 200
+            "row_count": query_result.get("row_count", 0)
+        })
         
     except Exception as e:
         return jsonify({
             "success": False,
-            "error": f"서버 오류: {str(e)}"
+            "error": f"서버 오류: {str(e)}",
+            "mode": "quick"
         }), 500
+
+@app.route('/analyze', methods=['POST'])
+def structured_analysis():
+    """구조화된 분석 - 차트와 분석 리포트 포함"""
+    try:
+        question = request.json['question']
+        
+        # SQL 생성 및 데이터 조회
+        sql_query = natural_language_to_sql(question)
+        query_result = execute_bigquery(sql_query)
+        
+        if not query_result["success"]:
+            return jsonify({
+                "success": False,
+                "error": query_result["error"],
+                "mode": "structured"
+            }), 500
+        
+        # 구조화된 분석 리포트 생성
+        analysis_result = generate_analysis_report(
+            question, 
+            sql_query, 
+            query_result["data"]
+        )
+        
+        return jsonify({
+            "success": True,
+            "mode": "structured",
+            "original_question": question,
+            "generated_sql": sql_query,
+            "data": query_result["data"],
+            "row_count": query_result.get("row_count", 0),
+            "analysis_report": analysis_result["report"],
+            "chart_config": analysis_result["chart_config"],
+            "data_summary": analysis_result["data_summary"]
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"서버 오류: {str(e)}",
+            "mode": "structured"
+        }), 500
+
+@app.route('/creative-html', methods=['POST'])
+def creative_html_analysis():
+    """창의적 HTML 분석 - Claude가 완전한 HTML 생성"""
+    try:
+        question = request.json['question']
+        
+        # SQL 생성 및 데이터 조회
+        sql_query = natural_language_to_sql(question)
+        query_result = execute_bigquery(sql_query)
+        
+        if not query_result["success"]:
+            return jsonify({
+                "success": False,
+                "error": query_result["error"],
+                "mode": "creative_html"
+            }), 500
+        
+        # Claude HTML 생성
+        html_result = generate_html_analysis_report(
+            question, 
+            sql_query, 
+            query_result["data"]
+        )
+        
+        return jsonify({
+            "success": True,
+            "mode": "creative_html",
+            "original_question": question,
+            "generated_sql": sql_query,
+            "row_count": query_result.get("row_count", 0),
+            "html_content": html_result["html_content"],
+            "quality_score": html_result["quality_score"],
+            "attempts": html_result["attempts"],
+            "is_fallback": html_result.get("fallback", False)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": f"서버 오류: {str(e)}",
+            "mode": "creative_html"
+        }), 500
+
+# 기존 엔드포인트들 (하위 호환성)
+@app.route('/query', methods=['POST'])
+def legacy_query():
+    """기존 호환성을 위한 엔드포인트 - 구조화된 분석으로 리다이렉트"""
+    return structured_analysis()
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -606,7 +828,8 @@ def health_check():
         "services": {
             "anthropic": "configured" if ANTHROPIC_API_KEY else "not configured",
             "bigquery": "configured (using ADC)" if bigquery_client else "not configured"
-        }
+        },
+        "supported_modes": ["quick", "structured", "creative_html"]
     })
 
 @app.route('/schema', methods=['GET'])
@@ -643,6 +866,7 @@ if __name__ == '__main__':
     
     print(f"프로젝트 ID: {PROJECT_ID}")
     print(f"테이블: {PROJECT_ID}.test_dataset.events_20201121")
+    print("지원 모드: 빠른 조회(/quick), 구조화된 분석(/analyze), 창의적 HTML(/creative-html)")
     
     # Cloud Run에서는 PORT 환경변수 사용
     port = int(os.getenv('PORT', 8080))

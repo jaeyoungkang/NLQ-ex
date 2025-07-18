@@ -99,28 +99,35 @@
 
         .btn {
             border: none;
-            padding: 15px 30px;
+            padding: 15px 25px;
             border-radius: 8px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-width: 120px;
+            min-width: 140px;
+            position: relative;
+            overflow: hidden;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+        .btn-quick {
+            background: linear-gradient(135deg, #34a853 0%, #67b566 100%);
             color: white;
         }
 
-        .btn-secondary {
+        .btn-structured {
+            background: linear-gradient(135deg, #4285f4 0%, #3367d6 100%);
+            color: white;
+        }
+
+        .btn-creative {
             background: linear-gradient(135deg, #ff6b6b 0%, #ffa726 100%);
             color: white;
         }
 
         .btn:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(66, 133, 244, 0.3);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
 
         .btn:disabled {
@@ -129,40 +136,79 @@
             transform: none;
         }
 
-        .analysis-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 15px;
+        .btn-description {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin-top: 5px;
         }
 
-        .toggle-switch {
-            position: relative;
-            width: 50px;
-            height: 25px;
-            background: #ccc;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: background 0.3s ease;
+        .mode-selector {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4285f4;
         }
 
-        .toggle-switch.active {
-            background: #4285f4;
+        .mode-selector h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.1rem;
         }
 
-        .toggle-slider {
-            position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 21px;
-            height: 21px;
+        .mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .mode-card {
             background: white;
-            border-radius: 50%;
-            transition: transform 0.3s ease;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e1e5e9;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
         }
 
-        .toggle-switch.active .toggle-slider {
-            transform: translateX(25px);
+        .mode-card:hover {
+            border-color: #4285f4;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.15);
+        }
+
+        .mode-card.selected {
+            border-color: #4285f4;
+            background: #f8f9fa;
+        }
+
+        .mode-card h4 {
+            color: #4285f4;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .mode-card p {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .mode-features {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .mode-features li {
+            color: #28a745;
+            font-size: 0.8rem;
+            margin: 2px 0;
+        }
+
+        .mode-features li:before {
+            content: "✓ ";
+            font-weight: bold;
         }
 
         .example-questions {
@@ -222,6 +268,7 @@
             align-items: center;
             gap: 10px;
             color: #666;
+            margin-top: 15px;
         }
 
         .spinner {
@@ -263,6 +310,25 @@
             border-radius: 20px;
             font-size: 0.9rem;
             font-weight: 600;
+        }
+
+        .mode-badge {
+            background: #34a853;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 10px;
+        }
+
+        .mode-badge.structured {
+            background: #4285f4;
+        }
+
+        .mode-badge.creative {
+            background: #ff6b6b;
         }
 
         .results-tabs {
@@ -330,66 +396,6 @@
             white-space: pre-wrap;
         }
 
-        .analysis-report {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 12px;
-            border-left: 4px solid #ff6b6b;
-            line-height: 1.6;
-        }
-
-        .analysis-report h1,
-        .analysis-report h2,
-        .analysis-report h3 {
-            color: #333;
-            margin: 20px 0 10px 0;
-        }
-
-        .analysis-report h1 {
-            font-size: 1.4rem;
-            border-bottom: 2px solid #ff6b6b;
-            padding-bottom: 5px;
-        }
-
-        .analysis-report h2 {
-            font-size: 1.2rem;
-            color: #ff6b6b;
-        }
-
-        .analysis-report ul {
-            margin: 10px 0 10px 20px;
-        }
-
-        .analysis-report li {
-            margin: 5px 0;
-        }
-
-        .analysis-report strong {
-            color: #2c5282;
-        }
-
-        .chart-container {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin: 20px 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: 1px solid #e1e5e9;
-        }
-
-        .chart-container h4 {
-            margin-bottom: 15px;
-            color: #333;
-            text-align: center;
-            font-size: 1.1rem;
-        }
-
-        .chart-wrapper {
-            position: relative;
-            height: 400px;
-            width: 100%;
-        }
-
         .data-summary {
             background: #f8f9fa;
             padding: 20px;
@@ -452,6 +458,100 @@
 
         .insights-list li:last-child {
             border-bottom: none;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e1e5e9;
+        }
+
+        .chart-container h4 {
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+
+        #analysisChart {
+            max-height: 400px;
+        }
+
+        .analysis-report {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid #ff6b6b;
+            line-height: 1.6;
+        }
+
+        .analysis-report h1,
+        .analysis-report h2,
+        .analysis-report h3 {
+            color: #333;
+            margin: 20px 0 10px 0;
+        }
+
+        .analysis-report h1 {
+            font-size: 1.4rem;
+            border-bottom: 2px solid #ff6b6b;
+            padding-bottom: 5px;
+        }
+
+        .analysis-report h2 {
+            font-size: 1.2rem;
+            color: #ff6b6b;
+        }
+
+        .analysis-report ul {
+            margin: 10px 0 10px 20px;
+        }
+
+        .analysis-report li {
+            margin: 5px 0;
+        }
+
+        .analysis-report strong {
+            color: #2c5282;
+        }
+
+        .analysis-report code {
+            background: #e2e8f0;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .html-controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .iframe-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .html-warning {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #ffc107;
+            font-size: 0.9rem;
         }
 
         .table-container {
@@ -559,6 +659,10 @@
                 align-items: stretch;
             }
 
+            .mode-grid {
+                grid-template-columns: 1fr;
+            }
+
             .example-grid {
                 grid-template-columns: 1fr;
             }
@@ -574,6 +678,14 @@
             .results-tabs {
                 flex-wrap: wrap;
             }
+
+            .html-controls {
+                flex-direction: column;
+            }
+            
+            .iframe-container iframe {
+                height: 400px;
+            }
         }
     </style>
 </head>
@@ -581,7 +693,7 @@
     <div class="container">
         <div class="header">
             <h1>📊 GA4 데이터 자연어 질의 & 분석</h1>
-            <p>Google Analytics 4 이벤트 데이터를 자연어로 질문하고 AI 분석 리포트를 받아보세요</p>
+            <p>Google Analytics 4 이벤트 데이터를 자연어로 질문하고 3가지 방식으로 분석해보세요</p>
         </div>
 
         <div class="main-content">
@@ -589,7 +701,43 @@
             <div class="info-badge">
                 📅 <strong>데이터 범위:</strong> 2020년 11월 21일 GA4 이벤트 데이터 | 
                 🏢 <strong>데이터 소스:</strong> nlq-ex.test_dataset.events_20201121 |
-                🤖 <strong>AI 분석:</strong> Claude를 통한 인사이트 도출
+                🎯 <strong>지원 모드:</strong> 빠른 조회 / 구조화 분석 / 창의적 HTML
+            </div>
+
+            <!-- 분석 모드 선택 -->
+            <div class="mode-selector">
+                <h3>🎛️ 분석 모드 선택</h3>
+                <div class="mode-grid">
+                    <div class="mode-card" data-mode="quick">
+                        <h4>⚡ 빠른 조회</h4>
+                        <p>SQL 쿼리 실행 후 데이터만 빠르게 확인</p>
+                        <ul class="mode-features">
+                            <li>즉시 결과 표시</li>
+                            <li>테이블 형태 데이터</li>
+                            <li>간단한 분석용</li>
+                        </ul>
+                    </div>
+                    <div class="mode-card selected" data-mode="structured">
+                        <h4>📊 구조화 분석</h4>
+                        <p>데이터 + 차트 + AI 분석 리포트 통합 제공</p>
+                        <ul class="mode-features">
+                            <li>자동 차트 생성</li>
+                            <li>Claude Console 스타일 리포트</li>
+                            <li>비즈니스 인사이트</li>
+                            <li>데이터 요약 카드</li>
+                        </ul>
+                    </div>
+                    <div class="mode-card" data-mode="creative">
+                        <h4>🎨 창의적 HTML</h4>
+                        <p>Claude가 완전한 HTML 리포트 생성 (실험적)</p>
+                        <ul class="mode-features">
+                            <li>완전한 독립 문서</li>
+                            <li>창의적인 디자인</li>
+                            <li>다운로드 가능</li>
+                            <li>프레젠테이션용</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
             <!-- 예시 질문들 -->
@@ -620,6 +768,9 @@
                         <div class="example-item" onclick="setQuestion('도시별 이벤트 수 상위 10개를 보여주세요')">
                             <code>"도시별 이벤트 수 상위 10개를 보여주세요"</code>
                         </div>
+                        <div class="example-item" onclick="setQuestion('미국 사용자들의 이벤트 수를 알려주세요')">
+                            <code>"미국 사용자들의 이벤트 수를 알려주세요"</code>
+                        </div>
                     </div>
                 </div>
 
@@ -632,6 +783,9 @@
                         <div class="example-item" onclick="setQuestion('운영체제별 사용자 분포를 보여주세요')">
                             <code>"운영체제별 사용자 분포를 보여주세요"</code>
                         </div>
+                        <div class="example-item" onclick="setQuestion('플랫폼별 이벤트 수를 보여주세요')">
+                            <code>"플랫폼별 이벤트 수를 보여주세요"</code>
+                        </div>
                     </div>
                 </div>
 
@@ -643,6 +797,33 @@
                         </div>
                         <div class="example-item" onclick="setQuestion('page_view 이벤트가 가장 많은 시간대를 보여주세요')">
                             <code>"page_view 이벤트가 가장 많은 시간대를 보여주세요"</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-section">
+                    <div class="category-title">🛒 전자상거래 분석</div>
+                    <div class="example-grid">
+                        <div class="example-item" onclick="setQuestion('purchase 이벤트의 총 매출을 보여주세요')">
+                            <code>"purchase 이벤트의 총 매출을 보여주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('구매 이벤트 수를 알려주세요')">
+                            <code>"구매 이벤트 수를 알려주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('add_to_cart 이벤트가 많은 상위 10개 사용자를 보여주세요')">
+                            <code>"add_to_cart 이벤트가 많은 상위 10개 사용자를 보여주세요"</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-section">
+                    <div class="category-title">🔗 트래픽 소스 분석</div>
+                    <div class="example-grid">
+                        <div class="example-item" onclick="setQuestion('트래픽 소스별 이벤트 수를 보여주세요')">
+                            <code>"트래픽 소스별 이벤트 수를 보여주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('트래픽 매체별 사용자 수를 보여주세요')">
+                            <code>"트래픽 매체별 사용자 수를 보여주세요"</code>
                         </div>
                     </div>
                 </div>
@@ -659,16 +840,19 @@
                     ></textarea>
                 </div>
 
-                <div class="analysis-toggle">
-                    <div class="toggle-switch" id="analysisToggle">
-                        <div class="toggle-slider"></div>
-                    </div>
-                    <label for="analysisToggle">AI 분석 리포트 포함 (Claude가 데이터를 분석하여 인사이트 제공)</label>
-                </div>
-
                 <div class="button-group">
-                    <button id="submitBtn" class="btn btn-primary">🔍 질문하기</button>
-                    <button id="analyzeBtn" class="btn btn-secondary">📊 분석 리포트</button>
+                    <button id="quickBtn" class="btn btn-quick">
+                        ⚡ 빠른 조회
+                        <div class="btn-description">데이터만 빠르게</div>
+                    </button>
+                    <button id="structuredBtn" class="btn btn-structured">
+                        📊 구조화 분석
+                        <div class="btn-description">차트 + 리포트</div>
+                    </button>
+                    <button id="creativeBtn" class="btn btn-creative">
+                        🎨 창의적 HTML
+                        <div class="btn-description">독립 문서 생성</div>
+                    </button>
                     <div class="loading" id="loading">
                         <div class="spinner"></div>
                         <span id="loadingText">데이터를 조회하고 있습니다...</span>
@@ -686,19 +870,25 @@
     <script>
         // 전역 변수
         const questionInput = document.getElementById('questionInput');
-        const submitBtn = document.getElementById('submitBtn');
-        const analyzeBtn = document.getElementById('analyzeBtn');
+        const quickBtn = document.getElementById('quickBtn');
+        const structuredBtn = document.getElementById('structuredBtn');
+        const creativeBtn = document.getElementById('creativeBtn');
         const loading = document.getElementById('loading');
         const loadingText = document.getElementById('loadingText');
         const resultsSection = document.getElementById('resultsSection');
-        const analysisToggle = document.getElementById('analysisToggle');
 
-        let analysisEnabled = false;
+        let currentChart = null;
+        let selectedMode = 'structured';
 
-        // 분석 토글 이벤트
-        analysisToggle.addEventListener('click', function() {
-            analysisEnabled = !analysisEnabled;
-            this.classList.toggle('active', analysisEnabled);
+        // 모드 선택 카드 이벤트
+        document.querySelectorAll('.mode-card').forEach(card => {
+            card.addEventListener('click', function() {
+                // 기존 선택 제거
+                document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+                // 새 선택 추가
+                this.classList.add('selected');
+                selectedMode = this.dataset.mode;
+            });
         });
 
         // 예시 질문 설정 함수
@@ -710,18 +900,17 @@
         // Enter 키로 질문 전송 (Ctrl+Enter)
         questionInput.addEventListener('keydown', function(e) {
             if (e.ctrlKey && e.key === 'Enter') {
-                submitQuestion(false);
+                executeQuery(selectedMode);
             }
         });
 
-        // 질문하기 버튼 이벤트
-        submitBtn.addEventListener('click', () => submitQuestion(false));
+        // 버튼 이벤트들
+        quickBtn.addEventListener('click', () => executeQuery('quick'));
+        structuredBtn.addEventListener('click', () => executeQuery('structured'));
+        creativeBtn.addEventListener('click', () => executeQuery('creative'));
 
-        // 분석 리포트 버튼 이벤트
-        analyzeBtn.addEventListener('click', () => submitQuestion(true));
-
-        // 질문 전송 함수
-        async function submitQuestion(forceAnalysis = false) {
+        // 질문 실행 함수
+        async function executeQuery(mode) {
             const question = questionInput.value.trim();
 
             if (!question) {
@@ -730,76 +919,127 @@
                 return;
             }
 
-            const includeAnalysis = forceAnalysis || analysisEnabled;
-
             // UI 상태 변경
-            setLoadingState(true, includeAnalysis);
+            setLoadingState(true, mode);
 
             try {
-                const endpoint = includeAnalysis ? '/analyze' : '/query';
-                const requestBody = { 
-                    question: question,
-                    include_analysis: includeAnalysis
+                // 모드별 엔드포인트 결정
+                const endpoints = {
+                    'quick': '/quick',
+                    'structured': '/analyze',
+                    'creative': '/creative-html'
                 };
 
-                // API 호출 (현재 도메인 사용)
-                const response = await fetch(endpoint, {
+                const response = await fetch(endpoints[mode], {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify({ question: question })
                 });
 
                 const data = await response.json();
 
                 if (response.ok && data.success) {
-                    displayResults(data, includeAnalysis);
+                    displayResults(data, mode);
                 } else {
-                    displayError(data.error || '알 수 없는 오류가 발생했습니다.');
+                    displayError(data.error || '알 수 없는 오류가 발생했습니다.', mode);
                 }
             } catch (error) {
                 console.error('API 호출 오류:', error);
-                displayError(`네트워크 오류: ${error.message}`);
+                displayError(`네트워크 오류: ${error.message}`, mode);
             } finally {
                 setLoadingState(false);
             }
         }
 
         // 로딩 상태 설정
-        function setLoadingState(isLoading, isAnalysis = false) {
-            submitBtn.disabled = isLoading;
-            analyzeBtn.disabled = isLoading;
+        function setLoadingState(isLoading, mode = '') {
+            quickBtn.disabled = isLoading;
+            structuredBtn.disabled = isLoading;
+            creativeBtn.disabled = isLoading;
             loading.style.display = isLoading ? 'flex' : 'none';
             
             if (isLoading) {
-                if (isAnalysis) {
-                    loadingText.textContent = 'AI가 데이터를 분석하고 있습니다... (30초 정도 소요)';
-                    submitBtn.textContent = '분석 중...';
-                    analyzeBtn.textContent = '분석 중...';
-                } else {
-                    loadingText.textContent = '데이터를 조회하고 있습니다...';
-                    submitBtn.textContent = '처리 중...';
-                }
+                const messages = {
+                    'quick': '빠르게 데이터를 조회하고 있습니다...',
+                    'structured': 'AI가 데이터를 분석하고 차트를 생성하고 있습니다...',
+                    'creative': 'Claude가 창의적인 HTML 리포트를 생성하고 있습니다... (30초 소요)'
+                };
+                loadingText.textContent = messages[mode] || '데이터를 처리하고 있습니다...';
+                
+                const btnTexts = {
+                    'quick': '⏳ 조회 중...',
+                    'structured': '⏳ 분석 중...',
+                    'creative': '⏳ 생성 중...'
+                };
+                quickBtn.innerHTML = btnTexts['quick'];
+                structuredBtn.innerHTML = btnTexts['structured'];
+                creativeBtn.innerHTML = btnTexts['creative'];
             } else {
-                submitBtn.textContent = '🔍 질문하기';
-                analyzeBtn.textContent = '📊 분석 리포트';
+                quickBtn.innerHTML = '⚡ 빠른 조회<div class="btn-description">데이터만 빠르게</div>';
+                structuredBtn.innerHTML = '📊 구조화 분석<div class="btn-description">차트 + 리포트</div>';
+                creativeBtn.innerHTML = '🎨 창의적 HTML<div class="btn-description">독립 문서 생성</div>';
             }
         }
 
-        // 결과 표시 (탭 기능 포함)
-        function displayResults(data, hasAnalysis = false) {
+        // 결과 표시 (모드별 분기)
+        function displayResults(data, mode) {
+            if (mode === 'creative') {
+                displayCreativeHtmlResults(data);
+            } else if (mode === 'structured') {
+                displayStructuredResults(data);
+            } else {
+                displayQuickResults(data);
+            }
+        }
+
+        // 빠른 조회 결과 표시
+        function displayQuickResults(data) {
+            const resultHtml = `
+                <div class="results-header">
+                    <h2>⚡ 빠른 조회 결과 <span class="mode-badge quick">QUICK</span></h2>
+                    <div class="result-count">${data.row_count}개 결과</div>
+                </div>
+
+                <div class="query-info">
+                    <h3>📝 쿼리 정보</h3>
+                    <div class="original-question">
+                        <strong>원본 질문:</strong> ${escapeHtml(data.original_question)}
+                    </div>
+                    <div class="generated-sql">
+                        <strong>생성된 SQL:</strong><br>
+                        ${escapeHtml(data.generated_sql)}
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    ${createTable(data.data)}
+                </div>
+
+                <div class="success">
+                    <h3>✅ 조회 완료</h3>
+                    <p>총 ${data.row_count}개의 결과를 빠르게 조회했습니다.</p>
+                    <p>💡 더 자세한 분석을 원하시면 "구조화 분석" 모드를 사용해보세요.</p>
+                </div>
+            `;
+
+            resultsSection.innerHTML = resultHtml;
+        }
+
+        // 구조화된 분석 결과 표시
+        function displayStructuredResults(data) {
             let tabsHtml = `
                 <div class="results-tabs">
                     <button class="tab-button active" onclick="showTab('data')">📊 데이터</button>
                     <button class="tab-button" onclick="showTab('query')">📝 쿼리 정보</button>
-                    ${hasAnalysis && data.analysis_report ? '<button class="tab-button" onclick="showTab(\'analysis\')">🤖 AI 분석</button>' : ''}
+                    <button class="tab-button" onclick="showTab('analysis')">🤖 AI 분석</button>
                 </div>
             `;
 
             let resultHtml = `
                 <div class="results-header">
-                    <h2>📊 조회 결과</h2>
+                    <h2>📊 구조화 분석 결과 <span class="mode-badge structured">STRUCTURED</span></h2>
                     <div class="result-count">${data.row_count}개 결과</div>
                 </div>
 
@@ -824,7 +1064,6 @@
                     </div>
                 </div>
 
-                ${hasAnalysis && data.analysis_report ? `
                 <div class="tab-content" id="tab-analysis">
                     ${data.data_summary ? `
                     <div class="data-summary">
@@ -873,27 +1112,122 @@
                         ${parseMarkdown(data.analysis_report)}
                     </div>
                 </div>
-                ` : ''}
 
                 <div class="success">
-                    <h3>✅ 조회 완료</h3>
-                    <p>총 ${data.row_count}개의 결과를 성공적으로 조회했습니다.</p>
-                    ${hasAnalysis && data.analysis_report ? '<p>🤖 AI 분석 리포트가 생성되었습니다. "AI 분석" 탭을 확인해보세요.</p>' : ''}
-                    ${data.analysis_error ? `<p style="color: #ea4335;">⚠️ 분석 리포트 생성 실패: ${data.analysis_error}</p>` : ''}
+                    <h3>✅ 분석 완료</h3>
+                    <p>총 ${data.row_count}개의 결과를 성공적으로 분석했습니다.</p>
+                    <p>🤖 AI 분석 리포트와 차트를 "AI 분석" 탭에서 확인하세요.</p>
                 </div>
             `;
 
             resultsSection.innerHTML = resultHtml;
             
-            // 차트 생성 (분석 모드이고 차트 설정이 있는 경우)
-            if (hasAnalysis && data.chart_config) {
+            // 차트 생성
+            if (data.chart_config) {
                 setTimeout(() => createChart(data.data, data.chart_config), 100);
             }
         }
 
+        // 창의적 HTML 결과 표시
+        function displayCreativeHtmlResults(data) {
+            const qualityBadge = data.quality_score >= 80 ? 
+                `<span style="background: #34a853; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">고품질</span>` :
+                data.quality_score >= 60 ?
+                `<span style="background: #ffa726; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">양호</span>` :
+                `<span style="background: #ff6b6b; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">기본</span>`;
+
+            const resultHtml = `
+                <div class="results-header">
+                    <h2>🎨 창의적 HTML 리포트 <span class="mode-badge creative">CREATIVE</span></h2>
+                    <div class="result-count">${data.row_count}개 결과 • ${qualityBadge}</div>
+                </div>
+                
+                <div class="html-controls">
+                    <button onclick="openInNewWindow()" class="btn btn-structured">🔗 새 창에서 열기</button>
+                    <button onclick="downloadHtml()" class="btn btn-quick">💾 HTML 다운로드</button>
+                    ${data.is_fallback ? '<button onclick="regenerateHtml()" class="btn btn-creative">🔄 재생성</button>' : ''}
+                </div>
+                
+                ${data.is_fallback ? `
+                <div class="html-warning">
+                    ⚠️ <strong>알림:</strong> 고급 HTML 생성에 실패하여 기본 형태로 표시됩니다. 재생성을 시도해보세요.
+                </div>
+                ` : ''}
+                
+                <div class="iframe-container">
+                    <iframe 
+                        id="htmlReportFrame"
+                        style="width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 8px;"
+                        sandbox="allow-scripts allow-same-origin">
+                    </iframe>
+                </div>
+                
+                <div class="success">
+                    <h3>✅ HTML 리포트 생성 완료</h3>
+                    <p>Claude가 ${data.attempts}번의 시도를 통해 독립적인 HTML 리포트를 생성했습니다.</p>
+                    <p>품질 점수: ${data.quality_score}/100 | 총 ${data.row_count}개 결과 분석</p>
+                </div>
+            `;
+            
+            resultsSection.innerHTML = resultHtml;
+            
+            // iframe에 HTML 내용 로드
+            const iframe = document.getElementById('htmlReportFrame');
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(data.html_content);
+            doc.close();
+            
+            // 전역 변수에 HTML 저장
+            window.currentHtmlReport = data.html_content;
+            window.currentQuestion = data.original_question;
+        }
+
+        // 유틸리티 함수들
+
+        // 새 창에서 열기
+        function openInNewWindow() {
+            if (window.currentHtmlReport) {
+                const newWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes');
+                newWindow.document.write(window.currentHtmlReport);
+                newWindow.document.close();
+            }
+        }
+
+        // HTML 다운로드
+        function downloadHtml() {
+            if (window.currentHtmlReport) {
+                const blob = new Blob([window.currentHtmlReport], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ga4-analysis-${window.currentQuestion?.replace(/[^a-zA-Z0-9]/g, '-') || 'report'}-${new Date().toISOString().slice(0,10)}.html`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // HTML 재생성
+        function regenerateHtml() {
+            executeQuery('creative');
+        }
+
+        // 탭 전환 함수
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            if (tabName === 'analysis' && currentChart) {
+                setTimeout(() => currentChart.resize(), 100);
+            }
+        }
+
         // 차트 생성 함수
-        let currentChart = null;
-        
         function createChart(data, config) {
             const canvas = document.getElementById('analysisChart');
             if (!canvas || !data || data.length === 0) return;
@@ -1012,21 +1346,6 @@
                 options: chartOptions
             });
         }
-        // 탭 전환 함수
-        function showTab(tabName) {
-            // 모든 탭 버튼과 컨텐츠 비활성화
-            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            // 선택된 탭 활성화
-            event.target.classList.add('active');
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-            
-            // 분석 탭이 활성화되고 차트가 있는 경우 차트 리사이즈
-            if (tabName === 'analysis' && currentChart) {
-                setTimeout(() => currentChart.resize(), 100);
-            }
-        }
 
         // 마크다운 파싱 (간단한 버전)
         function parseMarkdown(text) {
@@ -1103,10 +1422,16 @@
         }
 
         // 오류 표시
-        function displayError(errorMessage) {
+        function displayError(errorMessage, mode) {
+            const modeLabels = {
+                'quick': '빠른 조회',
+                'structured': '구조화 분석',
+                'creative': '창의적 HTML'
+            };
+
             const errorHtml = `
                 <div class="error">
-                    <h3>❌ 오류 발생</h3>
+                    <h3>❌ ${modeLabels[mode]} 오류 발생</h3>
                     <p>${escapeHtml(errorMessage)}</p>
                     <p><small>서버 로그를 확인하거나 다른 질문을 시도해보세요.</small></p>
                 </div>
