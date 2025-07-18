@@ -390,8 +390,68 @@
             width: 100%;
         }
 
-        #analysisChart {
-            max-height: 400px;
+        .data-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border-left: 4px solid #34a853;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e1e5e9;
+            text-align: center;
+        }
+
+        .summary-card h4 {
+            color: #4285f4;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-card .value {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .summary-card .label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .insights-list {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .insights-list ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .insights-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .insights-list li:last-child {
+            border-bottom: none;
         }
 
         .table-container {
@@ -766,6 +826,41 @@
 
                 ${hasAnalysis && data.analysis_report ? `
                 <div class="tab-content" id="tab-analysis">
+                    ${data.data_summary ? `
+                    <div class="data-summary">
+                        <h3>📊 데이터 개요</h3>
+                        <div class="summary-grid">
+                            <div class="summary-card">
+                                <h4>총 레코드</h4>
+                                <div class="value">${data.data_summary.overview.total_rows.toLocaleString()}</div>
+                                <div class="label">개</div>
+                            </div>
+                            <div class="summary-card">
+                                <h4>컬럼 수</h4>
+                                <div class="value">${data.data_summary.overview.columns_count}</div>
+                                <div class="label">개</div>
+                            </div>
+                            <div class="summary-card">
+                                <h4>데이터 타입</h4>
+                                <div class="value">${Object.values(data.data_summary.overview.data_types).filter(type => type === 'numeric').length}</div>
+                                <div class="label">숫자형</div>
+                            </div>
+                            <div class="summary-card">
+                                <h4>카테고리형</h4>
+                                <div class="value">${Object.values(data.data_summary.overview.data_types).filter(type => type === 'categorical').length}</div>
+                                <div class="label">개</div>
+                            </div>
+                        </div>
+                        ${data.data_summary.quick_insights && data.data_summary.quick_insights.length > 0 ? `
+                        <div class="insights-list">
+                            <h4>🎯 빠른 인사이트</h4>
+                            <ul>
+                                ${data.data_summary.quick_insights.map(insight => `<li>${insight}</li>`).join('')}
+                            </ul>
+                        </div>
+                        ` : ''}
+                    </div>
+                    ` : ''}
                     ${data.chart_config ? `
                     <div class="chart-container">
                         <h4>${data.chart_config.title || '데이터 시각화'}</h4>

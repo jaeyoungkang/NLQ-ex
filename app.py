@@ -275,68 +275,164 @@ def suggest_chart_config(data, columns):
     
     return None
 
+def analyze_data_structure(data):
+    """데이터 구조를 분석하여 통계 요약 생성"""
+    if not data or len(data) == 0:
+        return {}
+    
+    analysis = {
+        "row_count": len(data),
+        "columns": {},
+        "summary_stats": {},
+        "patterns": []
+    }
+    
+    # 각 컬럼별 분석
+    for col in data[0].keys():
+        values = [row[col] for row in data if row[col] is not None]
+        non_null_count = len(values)
+        null_count = len(data) - non_null_count
+        
+        col_analysis = {
+            "type": "unknown",
+            "non_null_count": non_null_count,
+            "null_count": null_count,
+            "null_percentage": round((null_count / len(data)) * 100, 1)
+        }
+        
+        if values:
+            # 데이터 타입 판단
+            first_val = values[0]
+            if isinstance(first_val, (int, float)):
+                col_analysis["type"] = "numeric"
+                numeric_values = [float(v) for v in values if isinstance(v, (int, float))]
+                if numeric_values:
+                    col_analysis.update({
+                        "min": min(numeric_values),
+                        "max": max(numeric_values),
+                        "mean": round(sum(numeric_values) / len(numeric_values), 2),
+                        "median": round(sorted(numeric_values)[len(numeric_values)//2], 2),
+                        "sum": sum(numeric_values)
+                    })
+            elif isinstance(first_val, str):
+                col_analysis["type"] = "categorical"
+                unique_values = list(set(values))
+                col_analysis.update({
+                    "unique_count": len(unique_values),
+                    "most_common": max(set(values), key=values.count) if values else None,
+                    "top_values": dict(sorted(
+                        [(v, values.count(v)) for v in set(values)], 
+                        key=lambda x: x[1], reverse=True
+                    )[:5])
+                })
+        
+        analysis["columns"][col] = col_analysis
+    
+    return analysis
+
+def generate_summary_insights(data_analysis, question):
+    """데이터 분석 결과를 기반으로 핵심 인사이트 생성"""
+    insights = []
+    
+    # 데이터 크기 인사이트
+    row_count = data_analysis["row_count"]
+    if row_count > 1000:
+        insights.append(f"📊 **대용량 데이터셋**: {row_count:,}개의 레코드로 구성된 상당한 규모의 데이터입니다.")
+    elif row_count < 10:
+        insights.append(f"📊 **소규모 데이터셋**: {row_count}개의 레코드로 제한적인 샘플입니다.")
+    
+    # 컬럼별 인사이트
+    for col, stats in data_analysis["columns"].items():
+        if stats["type"] == "numeric":
+            if "sum" in stats and stats["sum"] > 0:
+                insights.append(f"🔢 **{col}**: 총합 {stats['sum']:,}, 평균 {stats['mean']:,}, 범위 {stats['min']:,}~{stats['max']:,}")
+        elif stats["type"] == "categorical":
+            if stats["unique_count"] < row_count * 0.5:  # 중복이 많은 경우
+                top_value = list(stats["top_values"].items())[0] if stats["top_values"] else None
+                if top_value:
+                    percentage = round((top_value[1] / row_count) * 100, 1)
+                    insights.append(f"📈 **{col}**: '{top_value[0]}'이 {percentage}%로 가장 높은 비중을 차지합니다.")
+    
+    return insights
+
 def generate_analysis_report(question, sql_query, query_results, max_rows_for_analysis=100):
-    """쿼리 결과를 Claude에게 보내서 분석 리포트 생성 (차트 포함)"""
+    """Claude Console 스타일의 분석 리포트 생성"""
     if not anthropic_client:
         raise Exception("Anthropic 클라이언트가 초기화되지 않았습니다.")
     
     if not query_results or len(query_results) == 0:
-        return {"report": "분석할 데이터가 없습니다.", "chart_config": None}
+        return {"report": "분석할 데이터가 없습니다.", "chart_config": None, "data_summary": None}
     
-    # 데이터가 너무 많으면 샘플링
+    # 데이터 구조 분석
+    data_analysis = analyze_data_structure(query_results)
+    summary_insights = generate_summary_insights(data_analysis, question)
+    
+    # 샘플링
     sample_data = query_results[:max_rows_for_analysis] if len(query_results) > max_rows_for_analysis else query_results
-    
-    # 데이터 요약 정보 생성
     columns = list(sample_data[0].keys()) if sample_data else []
-    data_summary = {
-        "total_rows": len(query_results),
-        "sample_rows": len(sample_data),
-        "columns": columns,
-        "sample_data": sample_data[:10]  # 처음 10개 행만 샘플로
-    }
     
     # 차트 설정 제안
     chart_config = suggest_chart_config(query_results, columns)
     
-    analysis_prompt = f"""다음은 GA4 데이터 분석 결과입니다. 이 데이터를 분석하여 인사이트가 풍부한 리포트를 작성해주세요.
+    # Claude Console 스타일 데이터 요약 생성
+    data_summary = {
+        "overview": {
+            "total_rows": len(query_results),
+            "columns_count": len(columns),
+            "data_types": {col: stats["type"] for col, stats in data_analysis["columns"].items()}
+        },
+        "key_statistics": data_analysis["columns"],
+        "quick_insights": summary_insights
+    }
+    
+    analysis_prompt = f"""다음은 GA4 데이터 분석 결과입니다. Claude Console과 같은 스타일로 구조화된 분석 리포트를 작성해주세요.
 
 **원본 질문:** {question}
 
-**실행된 SQL 쿼리:**
-```sql
-{sql_query}
-```
+**데이터 개요:**
+- 총 레코드 수: {data_analysis['row_count']:,}개
+- 컬럼 수: {len(columns)}개
+- 컬럼 구성: {', '.join([f"{col}({stats['type']})" for col, stats in data_analysis['columns'].items()])}
 
-**데이터 요약:**
-- 총 행 수: {data_summary['total_rows']:,}개
-- 분석 대상: {data_summary['sample_rows']:,}개 행
-- 컬럼: {', '.join(data_summary['columns'])}
+**핵심 통계:**
+{json.dumps(data_analysis['columns'], indent=2, ensure_ascii=False, default=str)}
 
-**샘플 데이터 (상위 10개 행):**
-{json.dumps(data_summary['sample_data'], indent=2, ensure_ascii=False, default=str)}
+**자동 생성된 인사이트:**
+{chr(10).join(summary_insights)}
 
-**차트 생성 정보:**
-{f"이 데이터는 {chart_config['type']} 차트로 시각화될 예정입니다." if chart_config else "이 데이터는 차트로 시각화하기 어려운 구조입니다."}
+**샘플 데이터 (상위 5개 행):**
+{json.dumps(query_results[:5], indent=2, ensure_ascii=False, default=str)}
 
-**분석 요청사항:**
-1. 핵심 인사이트 3-5개를 도출해주세요
-2. 데이터의 패턴이나 트렌드를 분석해주세요
-3. 비즈니스 관점에서의 시사점을 제시해주세요
-4. 차트가 생성되는 경우, 차트에서 주목해야 할 포인트를 언급해주세요
-5. 추가 분석이 필요한 영역이 있다면 제안해주세요
-6. 데이터 품질이나 특이사항이 있다면 언급해주세요
+다음과 같은 Claude Console 스타일로 리포트를 작성해주세요:
 
-**리포트 형식:**
-- 한국어로 작성
-- 구조화된 마크다운 형식
-- 구체적인 수치와 함께 설명
-- 차트 해석 포함 (차트가 있는 경우)
-- 실행 가능한 제안사항 포함"""
+## 📊 데이터 분석 리포트
+
+### 🎯 핵심 인사이트
+(3-4개의 핵심 발견사항을 간결하고 명확하게 제시)
+
+### 📈 주요 통계
+(숫자로 표현 가능한 핵심 지표들)
+
+### 🔍 패턴 분석
+(데이터에서 발견되는 트렌드나 패턴)
+
+### 💡 비즈니스 시사점
+(실무진이 활용할 수 있는 구체적인 제안)
+
+### 🚀 다음 단계 제안
+(추가 분석이나 액션 아이템)
+
+**작성 지침:**
+- 각 섹션은 간결하고 스캔 가능하도록 작성
+- 구체적인 수치와 퍼센티지 포함
+- 이모지를 활용한 시각적 구분
+- 업무에 바로 적용 가능한 내용 위주
+- 차트가 있다면 차트 해석 포함"""
 
     try:
         response = anthropic_client.messages.create(
             model="claude-3-5-sonnet-20241022",
-            max_tokens=2000,
+            max_tokens=2500,
             messages=[
                 {"role": "user", "content": analysis_prompt}
             ]
@@ -346,7 +442,8 @@ def generate_analysis_report(question, sql_query, query_results, max_rows_for_an
         
         return {
             "report": analysis_report,
-            "chart_config": chart_config
+            "chart_config": chart_config,
+            "data_summary": data_summary
         }
         
     except Exception as e:
@@ -407,6 +504,7 @@ def process_natural_language_query():
                 )
                 response["analysis_report"] = analysis_result["report"]
                 response["chart_config"] = analysis_result["chart_config"]
+                response["data_summary"] = analysis_result["data_summary"]
             except Exception as e:
                 response["analysis_error"] = f"분석 리포트 생성 실패: {str(e)}"
         
@@ -461,6 +559,7 @@ def analyze_query_results():
         # 3단계: 분석 리포트 생성 (옵션)
         analysis_report = None
         chart_config = None
+        data_summary = None
         if include_analysis and query_result["data"]:
             try:
                 analysis_result = generate_analysis_report(
@@ -470,6 +569,7 @@ def analyze_query_results():
                 )
                 analysis_report = analysis_result["report"]
                 chart_config = analysis_result["chart_config"]
+                data_summary = analysis_result["data_summary"]
             except Exception as e:
                 print(f"분석 리포트 생성 실패: {e}")
                 analysis_report = f"분석 리포트 생성 중 오류 발생: {str(e)}"
@@ -482,7 +582,8 @@ def analyze_query_results():
             "data": query_result["data"],
             "row_count": query_result.get("row_count", 0),
             "analysis_report": analysis_report,
-            "chart_config": chart_config
+            "chart_config": chart_config,
+            "data_summary": data_summary
         }
         
         return jsonify(response), 200
