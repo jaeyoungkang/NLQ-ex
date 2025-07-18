@@ -191,6 +191,7 @@ GA4 일반적인 쿼리 패턴:
 
 def debug_bigquery_result(results):
     """BigQuery 결과 구조 디버깅"""
+    print("debug_bigquery_result")
     for i, row in enumerate(results):
         print(f"Row {i} type: {type(row)}")
         print(f"Row {i} content: {row}")
@@ -227,6 +228,7 @@ def execute_bigquery(sql_query):
     print("execute_bigquery")
     try:
         query_job = bigquery_client.query(sql_query)
+        print(f"bigquery_client.query {query_job.result()} ")
         results = query_job.result()
         debug_bigquery_result(results)
         
