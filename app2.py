@@ -224,6 +224,7 @@ def safe_row_to_dict(row):
 
 def execute_bigquery(sql_query):
     """개선된 BigQuery 실행 함수"""
+    print("execute_bigquery")
     try:
         query_job = bigquery_client.query(sql_query)
         results = query_job.result()
@@ -233,6 +234,7 @@ def execute_bigquery(sql_query):
         for row in results:
             # 안전한 변환
             row_dict = safe_row_to_dict(row)
+            print(f"Row 변환 성공: {row_dict}")
             
             # 타입 정규화
             normalized_row = {}
