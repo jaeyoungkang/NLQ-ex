@@ -259,6 +259,9 @@ def execute_bigquery(sql_query):
         }
         
     except Exception as e:
+        print(f"오류 타입: {type(e).__name__}")
+        print(f"오류 메시지: {str(e)}")
+
         return {
             "success": False,
             "error": str(e),
