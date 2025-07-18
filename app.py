@@ -40,41 +40,93 @@ except Exception as e:
     print(f"BigQuery 클라이언트 초기화 실패: {e}")
     PROJECT_ID = os.getenv('GOOGLE_CLOUD_PROJECT', 'your-project-id')
 
-# 샘플 테이블 스키마 정보 (수정된 버전)
+# GA4 Events 테이블 스키마 정보
 TABLE_SCHEMA = {
-    "users": {
+    "events_20201121": {
+        "description": "GA4 이벤트 데이터 (2020년 11월 21일)",
         "columns": [
-            {"name": "user_id", "type": "INTEGER", "description": "사용자 고유 ID"},
-            {"name": "name", "type": "STRING", "description": "사용자 이름"},
-            {"name": "email", "type": "STRING", "description": "이메일 주소"},
-            {"name": "created_at", "type": "TIMESTAMP", "description": "계정 생성일"},
-            {"name": "age", "type": "INTEGER", "description": "나이"},
-            {"name": "city", "type": "STRING", "description": "거주 도시"}
-        ]
-    },
-    "orders": {
-        "columns": [
-            {"name": "order_id", "type": "INTEGER", "description": "주문 고유 ID"},
-            {"name": "user_id", "type": "INTEGER", "description": "주문한 사용자 ID"},
-            {"name": "product_name", "type": "STRING", "description": "상품명"},
-            {"name": "amount", "type": "FLOAT", "description": "주문 금액"},
-            {"name": "order_date", "type": "DATE", "description": "주문일"},
-            {"name": "status", "type": "STRING", "description": "주문 상태 (pending, completed, cancelled)"}
+            {"name": "event_date", "type": "STRING", "description": "이벤트 날짜 (YYYYMMDD 형식)"},
+            {"name": "event_timestamp", "type": "INTEGER", "description": "이벤트 타임스탬프 (마이크로초)"},
+            {"name": "event_name", "type": "STRING", "description": "이벤트 이름 (page_view, purchase, add_to_cart 등)"},
+            {"name": "event_previous_timestamp", "type": "INTEGER", "description": "이전 이벤트 타임스탬프"},
+            {"name": "event_value_in_usd", "type": "FLOAT", "description": "이벤트 값 (USD)"},
+            {"name": "event_bundle_sequence_id", "type": "INTEGER", "description": "이벤트 번들 시퀀스 ID"},
+            {"name": "event_server_timestamp_offset", "type": "INTEGER", "description": "서버 타임스탬프 오프셋"},
+            {"name": "user_id", "type": "STRING", "description": "사용자 ID"},
+            {"name": "user_pseudo_id", "type": "STRING", "description": "익명 사용자 ID"},
+            {"name": "privacy_info", "type": "RECORD", "description": "개인정보 관련 정보"},
+            {"name": "user_properties", "type": "RECORD", "description": "사용자 속성 (중첩된 키-값 쌍)"},
+            {"name": "user_first_touch_timestamp", "type": "INTEGER", "description": "사용자 첫 접촉 타임스탬프"},
+            {"name": "user_ltv", "type": "RECORD", "description": "사용자 생애가치 정보"},
+            {"name": "device", "type": "RECORD", "description": "기기 정보 (category, mobile_brand_name, operating_system 등)"},
+            {"name": "geo", "type": "RECORD", "description": "지리적 정보 (country, region, city 등)"},
+            {"name": "app_info", "type": "RECORD", "description": "앱 정보 (id, version, install_store 등)"},
+            {"name": "traffic_source", "type": "RECORD", "description": "트래픽 소스 정보 (name, medium, source 등)"},
+            {"name": "stream_id", "type": "STRING", "description": "스트림 ID"},
+            {"name": "platform", "type": "STRING", "description": "플랫폼 (WEB, IOS, ANDROID)"},
+            {"name": "event_params", "type": "RECORD", "description": "이벤트 매개변수 (중첩된 키-값 쌍)"},
+            {"name": "user_ltv", "type": "RECORD", "description": "사용자 생애가치"},
+            {"name": "ecommerce", "type": "RECORD", "description": "전자상거래 정보 (purchase_revenue, items 등)"},
+            {"name": "items", "type": "RECORD", "description": "상품 정보 배열 (item_id, item_name, price 등)"}
+        ],
+        "sample_queries": [
+            "오늘 이벤트 수를 알려주세요",
+            "가장 많이 발생한 이벤트 유형을 보여주세요",
+            "국가별 사용자 수를 보여주세요",
+            "모바일과 데스크톱 사용자 비율을 보여주세요",
+            "purchase 이벤트의 총 매출을 보여주세요",
+            "page_view 이벤트가 가장 많은 시간대를 보여주세요",
+            "운영체제별 사용자 분포를 보여주세요",
+            "트래픽 소스별 이벤트 수를 보여주세요"
         ]
     }
 }
 
 def get_schema_prompt():
-    """테이블 스키마 정보를 프롬프트 형태로 변환"""
-    schema_text = f"다음은 BigQuery 데이터베이스의 테이블 스키마 정보입니다 (프로젝트: {PROJECT_ID}):\n\n"
+    """GA4 테이블 스키마 정보를 프롬프트 형태로 변환"""
+    full_table_name = f"`{PROJECT_ID}.test_dataset.events_20201121`"
     
-    for table_name, table_info in TABLE_SCHEMA.items():
-        full_table_name = f"`{PROJECT_ID}.test_dataset.{table_name}`"
-        schema_text += f"테이블: {full_table_name}\n"
-        schema_text += "컬럼:\n"
-        for column in table_info["columns"]:
-            schema_text += f"  - {column['name']} ({column['type']}): {column['description']}\n"
-        schema_text += "\n"
+    schema_text = f"""다음은 BigQuery GA4 이벤트 데이터의 테이블 스키마 정보입니다 (프로젝트: {PROJECT_ID}):
+
+테이블: {full_table_name}
+설명: Google Analytics 4 이벤트 데이터 (2020년 11월 21일)
+
+주요 컬럼:
+- event_date (STRING): 이벤트 날짜 (YYYYMMDD 형식)
+- event_timestamp (INTEGER): 이벤트 타임스탬프 (마이크로초)
+- event_name (STRING): 이벤트 이름 (page_view, purchase, add_to_cart, session_start 등)
+- event_value_in_usd (FLOAT): 이벤트 값 (USD)
+- user_id (STRING): 사용자 ID
+- user_pseudo_id (STRING): 익명 사용자 ID
+
+중첩된 구조체:
+- device.category (STRING): 기기 카테고리 (mobile, desktop, tablet)
+- device.operating_system (STRING): 운영체제 (iOS, Android, Windows 등)
+- device.mobile_brand_name (STRING): 모바일 브랜드명
+- geo.country (STRING): 국가
+- geo.region (STRING): 지역
+- geo.city (STRING): 도시
+- traffic_source.name (STRING): 트래픽 소스명
+- traffic_source.medium (STRING): 매체
+- traffic_source.source (STRING): 소스
+- app_info.id (STRING): 앱 ID
+- platform (STRING): 플랫폼 (WEB, IOS, ANDROID)
+
+이벤트 매개변수 (event_params 배열):
+- event_params 배열에서 특정 매개변수 추출 방법:
+  (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'page_title')
+  (SELECT value.int_value FROM UNNEST(event_params) WHERE key = 'ga_session_id')
+
+전자상거래 정보:
+- ecommerce.purchase_revenue (FLOAT): 구매 매출
+- ecommerce.purchase_revenue_in_usd (FLOAT): USD 구매 매출
+
+중요한 BigQuery 함수:
+- TIMESTAMP_MICROS(event_timestamp): 타임스탬프를 날짜시간으로 변환
+- EXTRACT(HOUR FROM TIMESTAMP_MICROS(event_timestamp)): 시간 추출
+- PARSE_DATE('%Y%m%d', event_date): 문자열 날짜를 DATE 타입으로 변환
+
+"""
     
     return schema_text
 
@@ -85,30 +137,37 @@ def natural_language_to_sql(question):
     
     schema_prompt = get_schema_prompt()
     
-    system_prompt = f"""당신은 BigQuery SQL 전문가입니다. 사용자의 자연어 질문을 BigQuery SQL 쿼리로 변환해주세요.
+    system_prompt = f"""당신은 BigQuery SQL 전문가이며, GA4 (Google Analytics 4) 데이터 분석에 특화되어 있습니다. 
+사용자의 자연어 질문을 BigQuery SQL 쿼리로 변환해주세요.
 
 {schema_prompt}
 
 중요한 규칙:
 1. BigQuery 표준 SQL 문법을 사용해주세요.
-2. 테이블 참조 시 반드시 백틱(`)을 사용하여 `{PROJECT_ID}.test_dataset.테이블명` 형식으로 사용하세요.
-3. 날짜 관련 함수는 BigQuery 함수를 사용하세요 (예: CURRENT_DATE(), DATE_SUB() 등).
-4. SQL 쿼리만 반환하고, 다른 설명은 포함하지 마세요.
-5. 쿼리는 반드시 세미콜론(;)으로 끝나야 합니다.
+2. 테이블 참조 시 반드시 백틱(`)을 사용하여 `{PROJECT_ID}.test_dataset.events_20201121` 형식으로 사용하세요.
+3. GA4의 중첩된 구조체 접근 시 올바른 문법을 사용하세요 (예: device.category, geo.country).
+4. event_params 배열에서 값을 추출할 때는 UNNEST와 서브쿼리를 사용하세요.
+5. 타임스탬프 변환 시 TIMESTAMP_MICROS() 함수를 사용하세요.
+6. SQL 쿼리만 반환하고, 다른 설명은 포함하지 마세요.
+7. 쿼리는 반드시 세미콜론(;)으로 끝나야 합니다.
+8. 결과 수를 제한할 필요가 있다면 LIMIT 절을 사용하세요.
 
-사용 가능한 테이블:
-- `{PROJECT_ID}.test_dataset.users` (사용자 정보)
-- `{PROJECT_ID}.test_dataset.orders` (주문 정보)
+GA4 일반적인 쿼리 패턴:
+- 이벤트 수 집계: SELECT event_name, COUNT(*) as event_count FROM table GROUP BY event_name
+- 기기별 분석: SELECT device.category, COUNT(*) as count FROM table GROUP BY device.category
+- 지역별 분석: SELECT geo.country, COUNT(DISTINCT user_pseudo_id) as users FROM table GROUP BY geo.country
+- 시간대별 분석: SELECT EXTRACT(HOUR FROM TIMESTAMP_MICROS(event_timestamp)) as hour, COUNT(*) FROM table GROUP BY hour
+- 구매 분석: SELECT SUM(ecommerce.purchase_revenue_in_usd) as total_revenue FROM table WHERE event_name = 'purchase'
 
 예시:
-질문: "사용자 수를 알려주세요"
-답변: SELECT COUNT(*) as user_count FROM `{PROJECT_ID}.test_dataset.users`;
+질문: "오늘 총 이벤트 수를 알려주세요"
+답변: SELECT COUNT(*) as total_events FROM `{PROJECT_ID}.test_dataset.events_20201121`;
 
-질문: "총 주문 수를 알려주세요"
-답변: SELECT COUNT(*) as total_orders FROM `{PROJECT_ID}.test_dataset.orders`;
+질문: "가장 많이 발생한 이벤트 유형 상위 5개를 보여주세요"
+답변: SELECT event_name, COUNT(*) as event_count FROM `{PROJECT_ID}.test_dataset.events_20201121` GROUP BY event_name ORDER BY event_count DESC LIMIT 5;
 
-질문: "주문 상태별 개수를 보여주세요"
-답변: SELECT status, COUNT(*) as order_count FROM `{PROJECT_ID}.test_dataset.orders` GROUP BY status;"""
+질문: "국가별 고유 사용자 수를 보여주세요"
+답변: SELECT geo.country, COUNT(DISTINCT user_pseudo_id) as unique_users FROM `{PROJECT_ID}.test_dataset.events_20201121` GROUP BY geo.country ORDER BY unique_users DESC;"""
 
     try:
         response = anthropic_client.messages.create(
@@ -222,6 +281,7 @@ def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "project_id": PROJECT_ID,
+        "table": f"{PROJECT_ID}.test_dataset.events_20201121",
         "services": {
             "anthropic": "configured" if ANTHROPIC_API_KEY else "not configured",
             "bigquery": "configured (using ADC)"
@@ -234,6 +294,7 @@ def get_schema():
     return jsonify({
         "success": True,
         "project_id": PROJECT_ID,
+        "table": f"{PROJECT_ID}.test_dataset.events_20201121",
         "schema": TABLE_SCHEMA
     })
 
@@ -257,6 +318,7 @@ if __name__ == '__main__':
         print("경고: ANTHROPIC_API_KEY 환경 변수가 설정되지 않았습니다.")
     
     print(f"프로젝트 ID: {PROJECT_ID}")
+    print(f"테이블: {PROJECT_ID}.test_dataset.events_20201121")
     
     # Cloud Run에서는 PORT 환경변수 사용
     port = int(os.getenv('PORT', 8080))

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BigQuery 자연어 질의</title>
+    <title>GA4 데이터 자연어 질의</title>
     <style>
         * {
             margin: 0;
@@ -28,7 +28,7 @@
         }
 
         .header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
             color: white;
             padding: 40px;
             text-align: center;
@@ -79,8 +79,8 @@
 
         #questionInput:focus {
             outline: none;
-            border-color: #4facfe;
-            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+            border-color: #4285f4;
+            box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
         }
 
         #questionInput::placeholder {
@@ -95,7 +95,7 @@
         }
 
         #submitBtn {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
             color: white;
             border: none;
             padding: 15px 30px;
@@ -109,7 +109,7 @@
 
         #submitBtn:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+            box-shadow: 0 10px 20px rgba(66, 133, 244, 0.3);
         }
 
         #submitBtn:disabled {
@@ -123,7 +123,7 @@
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 20px;
-            border-left: 4px solid #4facfe;
+            border-left: 4px solid #4285f4;
         }
 
         .example-questions h3 {
@@ -132,10 +132,15 @@
             font-size: 1.1rem;
         }
 
+        .example-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 10px;
+        }
+
         .example-item {
             background: white;
-            padding: 10px 15px;
-            margin: 8px 0;
+            padding: 12px 15px;
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -143,13 +148,26 @@
         }
 
         .example-item:hover {
-            background: #e8f4fd;
-            border-color: #4facfe;
+            background: #e8f0fe;
+            border-color: #4285f4;
+            transform: translateY(-1px);
         }
 
         .example-item code {
-            color: #2c5282;
+            color: #1a73e8;
             font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .category-section {
+            margin-bottom: 20px;
+        }
+
+        .category-title {
+            font-weight: 600;
+            color: #1a73e8;
+            margin-bottom: 10px;
+            font-size: 1rem;
         }
 
         .loading {
@@ -163,7 +181,7 @@
             width: 20px;
             height: 20px;
             border: 2px solid #f3f3f3;
-            border-top: 2px solid #4facfe;
+            border-top: 2px solid #4285f4;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -192,7 +210,7 @@
         }
 
         .result-count {
-            background: #4facfe;
+            background: #4285f4;
             color: white;
             padding: 5px 12px;
             border-radius: 20px;
@@ -205,7 +223,7 @@
             padding: 20px;
             border-radius: 12px;
             margin-bottom: 20px;
-            border-left: 4px solid #4facfe;
+            border-left: 4px solid #4285f4;
         }
 
         .query-info h3 {
@@ -215,12 +233,12 @@
         }
 
         .original-question {
-            background: #e8f4fd;
+            background: #e8f0fe;
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 15px;
             font-style: italic;
-            color: #2c5282;
+            color: #1a73e8;
         }
 
         .generated-sql {
@@ -248,7 +266,7 @@
         }
 
         th {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
             color: white;
             padding: 15px 12px;
             text-align: left;
@@ -269,7 +287,7 @@
         }
 
         tr:hover {
-            background-color: #e8f4fd;
+            background-color: #e8f0fe;
         }
 
         .no-data {
@@ -280,9 +298,9 @@
         }
 
         .error {
-            background: #fed7d7;
-            border: 1px solid #fc8181;
-            color: #c53030;
+            background: #fce8e6;
+            border: 1px solid #ea4335;
+            color: #d93025;
             padding: 20px;
             border-radius: 12px;
             margin-top: 20px;
@@ -294,9 +312,9 @@
         }
 
         .success {
-            background: #c6f6d5;
-            border: 1px solid #68d391;
-            color: #22543d;
+            background: #e8f5e8;
+            border: 1px solid #34a853;
+            color: #137333;
             padding: 20px;
             border-radius: 12px;
             margin-top: 20px;
@@ -304,6 +322,16 @@
 
         .hidden {
             display: none;
+        }
+
+        .info-badge {
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            border-left: 3px solid #4285f4;
         }
 
         @media (max-width: 768px) {
@@ -329,6 +357,10 @@
                 align-items: stretch;
             }
 
+            .example-grid {
+                grid-template-columns: 1fr;
+            }
+
             .table-container {
                 overflow-x: auto;
             }
@@ -342,28 +374,103 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>💬 BigQuery 자연어 질의</h1>
-            <p>자연어로 질문하면 BigQuery에서 데이터를 조회해드립니다</p>
+            <h1>📊 GA4 데이터 자연어 질의</h1>
+            <p>Google Analytics 4 이벤트 데이터를 자연어로 질문하여 분석해보세요</p>
         </div>
 
         <div class="main-content">
+            <!-- 데이터 정보 -->
+            <div class="info-badge">
+                📅 <strong>데이터 범위:</strong> 2020년 11월 21일 GA4 이벤트 데이터 | 
+                🏢 <strong>데이터 소스:</strong> nlq-ex.test_dataset.events_20201121
+            </div>
+
             <!-- 예시 질문들 -->
             <div class="example-questions">
                 <h3>💡 예시 질문들 (클릭하면 자동 입력됩니다)</h3>
-                <div class="example-item" onclick="setQuestion('총 주문 수를 알려주세요')">
-                    <code>"총 주문 수를 알려주세요"</code>
+                
+                <div class="category-section">
+                    <div class="category-title">🔢 기본 집계 분석</div>
+                    <div class="example-grid">
+                        <div class="example-item" onclick="setQuestion('총 이벤트 수를 알려주세요')">
+                            <code>"총 이벤트 수를 알려주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('가장 많이 발생한 이벤트 유형 상위 10개를 보여주세요')">
+                            <code>"가장 많이 발생한 이벤트 유형 상위 10개를 보여주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('고유 사용자 수를 알려주세요')">
+                            <code>"고유 사용자 수를 알려주세요"</code>
+                        </div>
+                    </div>
                 </div>
-                <div class="example-item" onclick="setQuestion('주문 상태별 개수를 보여주세요')">
-                    <code>"주문 상태별 개수를 보여주세요"</code>
+
+                <div class="category-section">
+                    <div class="category-title">🌍 지역별 분석</div>
+                    <div class="example-grid">
+                        <div class="example-item" onclick="setQuestion('국가별 사용자 수를 보여주세요')">
+                            <code>"국가별 사용자 수를 보여주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('도시별 이벤트 수 상위 10개를 보여주세요')">
+                            <code>"도시별 이벤트 수 상위 10개를 보여주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('미국 사용자들의 이벤트 수를 알려주세요')">
+                            <code>"미국 사용자들의 이벤트 수를 알려주세요"</code>
+                        </div>
+                    </div>
                 </div>
-                <div class="example-item" onclick="setQuestion('사용자별 주문 수를 보여주세요')">
-                    <code>"사용자별 주문 수를 보여주세요"</code>
+
+                <div class="category-section">
+                    <div class="category-title">📱 기기 및 플랫폼 분석</div>
+                    <div class="example-grid">
+                        <div class="example-item" onclick="setQuestion('모바일과 데스크톱 사용자 비율을 보여주세요')">
+                            <code>"모바일과 데스크톱 사용자 비율을 보여주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('운영체제별 사용자 분포를 보여주세요')">
+                            <code>"운영체제별 사용자 분포를 보여주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('플랫폼별 이벤트 수를 보여주세요')">
+                            <code>"플랫폼별 이벤트 수를 보여주세요"</code>
+                        </div>
+                    </div>
                 </div>
-                <div class="example-item" onclick="setQuestion('가장 비싼 주문을 보여주세요')">
-                    <code>"가장 비싼 주문을 보여주세요"</code>
+
+                <div class="category-section">
+                    <div class="category-title">🕐 시간대별 분석</div>
+                    <div class="example-grid">
+                        <div class="example-item" onclick="setQuestion('시간대별 이벤트 수를 보여주세요')">
+                            <code>"시간대별 이벤트 수를 보여주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('page_view 이벤트가 가장 많은 시간대를 보여주세요')">
+                            <code>"page_view 이벤트가 가장 많은 시간대를 보여주세요"</code>
+                        </div>
+                    </div>
                 </div>
-                <div class="example-item" onclick="setQuestion('완료된 주문만 보여주세요')">
-                    <code>"완료된 주문만 보여주세요"</code>
+
+                <div class="category-section">
+                    <div class="category-title">🛒 전자상거래 분석</div>
+                    <div class="example-grid">
+                        <div class="example-item" onclick="setQuestion('purchase 이벤트의 총 매출을 보여주세요')">
+                            <code>"purchase 이벤트의 총 매출을 보여주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('구매 이벤트 수를 알려주세요')">
+                            <code>"구매 이벤트 수를 알려주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('add_to_cart 이벤트가 많은 상위 10개 사용자를 보여주세요')">
+                            <code>"add_to_cart 이벤트가 많은 상위 10개 사용자를 보여주세요"</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-section">
+                    <div class="category-title">🔗 트래픽 소스 분석</div>
+                    <div class="example-grid">
+                        <div class="example-item" onclick="setQuestion('트래픽 소스별 이벤트 수를 보여주세요')">
+                            <code>"트래픽 소스별 이벤트 수를 보여주세요"</code>
+                        </div>
+                        <div class="example-item" onclick="setQuestion('트래픽 매체별 사용자 수를 보여주세요')">
+                            <code>"트래픽 매체별 사용자 수를 보여주세요"</code>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -373,7 +480,7 @@
                     <label for="questionInput">질문을 입력하세요</label>
                     <textarea 
                         id="questionInput" 
-                        placeholder="예: 서울에 사는 사용자의 주문을 보여주세요"
+                        placeholder="예: 한국 사용자들의 page_view 이벤트 수를 알려주세요"
                         rows="4"
                     ></textarea>
                 </div>
@@ -578,11 +685,14 @@
 
         // 예시 질문 자동 완성
         const exampleQuestions = [
-            "사용자 수를 알려주세요",
-            "최근 주문을 보여주세요",
-            "도시별 사용자 수를 보여주세요",
-            "월별 주문 금액 합계를 보여주세요",
-            "취소된 주문의 개수를 알려주세요"
+            "오늘 총 이벤트 수를 알려주세요",
+            "가장 인기 있는 이벤트 유형을 보여주세요",
+            "국가별 사용자 분포를 보여주세요",
+            "모바일 사용자 비율을 알려주세요",
+            "시간대별 활동량을 보여주세요",
+            "구매 관련 이벤트를 분석해주세요",
+            "트래픽 소스별 성과를 보여주세요",
+            "운영체제별 사용자 현황을 알려주세요"
         ];
 
         // 질문 입력창 포커스 시 예시 표시
