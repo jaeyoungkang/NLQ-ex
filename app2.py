@@ -5,6 +5,7 @@ import os
 import json
 import re
 from datetime import datetime
+import traceback 
 
 app = Flask(__name__)
 
@@ -224,48 +225,47 @@ def safe_row_to_dict(row):
         return {"error": str(e), "raw_data": str(row)}
 
 def execute_bigquery(sql_query):
-    """개선된 BigQuery 실행 함수"""
-    print("execute_bigquery")
+    """[진단용] BigQuery 실행 함수"""
+    print("execute_bigquery (진단 모드)")
+    
+    # 1단계: Claude가 생성한 SQL을 잠시 무시하고, 가장 단순한 쿼리를 하드코딩합니다.
+    # 이 테스트는 BigQuery 클라이언트 자체가 정상 작동하는지 확인하기 위함입니다.
+    hardcoded_sql = " SELECT COUNT(*) as total_events FROM `nlq-ex.test_dataset.events_20201121`;"
+    print(f"실행될 SQL (진단용): {hardcoded_sql}")
+    print(f"원래 SQL: {sql_query}") # 원래 쿼리가 무엇인지도 확인합니다.
+    
     try:
-        query_job = bigquery_client.query(sql_query)
-        print("bigquery_client.query")
-
-        rows = []
-        for row in query_job.result():
-            # 안전한 변환
-            row_dict = safe_row_to_dict(row)
-            print(f"Row 변환 성공: {row_dict}")
-            
-            # 타입 정규화
-            normalized_row = {}
-            for key, value in row_dict.items():
-                if isinstance(value, datetime):
-                    normalized_row[key] = value.isoformat()
-                elif hasattr(value, 'isoformat'):
-                    normalized_row[key] = value.isoformat()
-                elif value is None:
-                    normalized_row[key] = None
-                else:
-                    normalized_row[key] = value
-            
-            rows.append(normalized_row)
+        # 2단계: 하드코딩된 SQL로 직접 실행해봅니다.
+        query_job = bigquery_client.query(hardcoded_sql)
+        print(">>> bigquery_client.query() 호출 성공!")
+        
+        # 3단계: 결과를 리스트로 변환하여 확인합니다.
+        results = list(query_job.result())
+        print(f">>> query_job.result() 및 list() 변환 성공! {len(results)}개의 행을 가져왔습니다.")
+        
+        # 4단계: Row를 딕셔너리로 변환합니다.
+        rows = [dict(row.items()) for row in results]
         
         return {
-            "success": True,
-            "data": rows,
-            "row_count": len(rows)
+            "success": True, 
+            "data": rows, 
+            "row_count": len(rows),
+            "note": "진단 모드로 실행되었습니다."
         }
-        
+
     except Exception as e:
+        print("\n" + "!"*20)
+        print("!!! 진단 중 오류 발생 !!!")
         print(f"오류 타입: {type(e).__name__}")
         print(f"오류 메시지: {str(e)}")
-
-        return {
-            "success": False,
-            "error": str(e),
-            "data": []
-        }
-
+        
+        # 오류의 상세한 위치를 파악하기 위해 전체 스택 트레이스를 출력합니다.
+        print("\n--- 스택 트레이스 ---")
+        traceback.print_exc()
+        print("--- 스택 트레이스 끝 ---" + "\n")
+        
+        return {"success": False, "error": str(e), "data": []}
+    
 def suggest_chart_config(data, columns):
     """데이터 구조를 분석하여 적절한 차트 설정 제안"""
     if not data or len(data) == 0:
