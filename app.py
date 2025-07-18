@@ -278,7 +278,7 @@ def suggest_chart_config(data, columns):
 
 def analyze_data_structure(data):
     """데이터 구조를 분석하여 통계 요약 생성"""
-    if not data or len(data) == 0:
+    if not data or len(data) == 0 or not isinstance(data[0], dict):
         return {}
     
     analysis = {
@@ -290,7 +290,12 @@ def analyze_data_structure(data):
     
     # 각 컬럼별 분석
     for col in data[0].keys():
-        values = [row[col] for row in data if row[col] is not None]
+        # [수정 전]
+        # values = [row[col] for row in data if row[col] is not None]
+        
+        # [수정 후] row가 dict 타입인지 먼저 확인하고, .get()을 사용해 안전하게 값에 접근합니다.
+        values = [row.get(col) for row in data if isinstance(row, dict) and row.get(col) is not None]
+        
         non_null_count = len(values)
         null_count = len(data) - non_null_count
         
@@ -298,7 +303,7 @@ def analyze_data_structure(data):
             "type": "unknown",
             "non_null_count": non_null_count,
             "null_count": null_count,
-            "null_percentage": round((null_count / len(data)) * 100, 1)
+            "null_percentage": round((null_count / len(data)) * 100, 1) if len(data) > 0 else 0
         }
         
         if values:
