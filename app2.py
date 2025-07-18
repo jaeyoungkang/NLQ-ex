@@ -230,8 +230,7 @@ def execute_bigquery(sql_query):
         query_job = bigquery_client.query(sql_query)
         print("bigquery_client.query")
         results = query_job.result()
-        debug_bigquery_result(results)
-        
+        print("results = query_job.result()")
         rows = []
         for row in results:
             # 안전한 변환
