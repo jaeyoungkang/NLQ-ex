@@ -202,16 +202,46 @@ def execute_bigquery(sql_query):
         # 결과를 딕셔너리 리스트로 변환
         rows = []
         for row in results:
+            # BigQuery Row 객체를 딕셔너리로 변환
             row_dict = {}
-            for key, value in row.items():
-                # BigQuery의 특수 타입들을 JSON 직렬화 가능한 형태로 변환
-                if isinstance(value, datetime):
-                    row_dict[key] = value.isoformat()
-                elif hasattr(value, 'isoformat'):  # date, time 객체
-                    row_dict[key] = value.isoformat()
+            
+            # Row 객체의 keys()와 values()를 사용하여 안전하게 변환
+            try:
+                # BigQuery Row 객체를 딕셔너리로 변환하는 안전한 방법
+                if hasattr(row, 'keys') and hasattr(row, 'values'):
+                    for key, value in zip(row.keys(), row.values()):
+                        # BigQuery의 특수 타입들을 JSON 직렬화 가능한 형태로 변환
+                        if isinstance(value, datetime):
+                            row_dict[key] = value.isoformat()
+                        elif hasattr(value, 'isoformat'):  # date, time 객체
+                            row_dict[key] = value.isoformat()
+                        else:
+                            row_dict[key] = value
                 else:
-                    row_dict[key] = value
+                    # 대안적인 변환 방법
+                    row_dict = dict(row)
+                    # 타입 변환 처리
+                    for key, value in row_dict.items():
+                        if isinstance(value, datetime):
+                            row_dict[key] = value.isoformat()
+                        elif hasattr(value, 'isoformat'):
+                            row_dict[key] = value.isoformat()
+                        
+            except Exception as e:
+                print(f"Row 변환 중 오류: {e}")
+                # 최후의 수단으로 문자열 변환
+                try:
+                    row_dict = {f"col_{i}": str(val) for i, val in enumerate(row)}
+                except Exception as inner_e:
+                    print(f"문자열 변환 중 오류: {inner_e}")
+                    row_dict = {"error": f"Row 변환 실패: {str(e)}"}
+            
             rows.append(row_dict)
+        
+        print(f"변환된 행 수: {len(rows)}")  # 디버깅용
+        if rows:
+            print(f"첫 번째 행 타입: {type(rows[0])}")  # 디버깅용
+            print(f"첫 번째 행 키: {list(rows[0].keys()) if isinstance(rows[0], dict) else 'Not a dict'}")  # 디버깅용
         
         return {
             "success": True,
@@ -220,6 +250,7 @@ def execute_bigquery(sql_query):
         }
         
     except Exception as e:
+        print(f"BigQuery 실행 중 오류: {str(e)}")
         return {
             "success": False,
             "error": str(e),
@@ -278,8 +309,33 @@ def suggest_chart_config(data, columns):
 
 def analyze_data_structure(data):
     """데이터 구조를 분석하여 통계 요약 생성"""
-    if not data or len(data) == 0 or not isinstance(data[0], dict):
-        return {}
+    if not data or len(data) == 0:
+        return {
+            "row_count": 0,
+            "columns": {},
+            "summary_stats": {},
+            "patterns": []
+        }
+    
+    # 데이터 타입 검증
+    if not isinstance(data, list):
+        print(f"경고: 데이터가 리스트가 아닙니다: {type(data)}")
+        return {
+            "row_count": 0,
+            "columns": {},
+            "summary_stats": {},
+            "patterns": ["데이터 타입 오류"]
+        }
+    
+    # 첫 번째 행 검증
+    if not data or not isinstance(data[0], dict):
+        print(f"경고: 첫 번째 행이 딕셔너리가 아닙니다: {type(data[0]) if data else 'None'}")
+        return {
+            "row_count": len(data),
+            "columns": {},
+            "summary_stats": {},
+            "patterns": ["데이터 구조 오류"]
+        }
     
     analysis = {
         "row_count": len(data),
@@ -289,50 +345,65 @@ def analyze_data_structure(data):
     }
     
     # 각 컬럼별 분석
-    for col in data[0].keys():
-        # [수정 전]
-        # values = [row[col] for row in data if row[col] is not None]
-        
-        # [수정 후] row가 dict 타입인지 먼저 확인하고, .get()을 사용해 안전하게 값에 접근합니다.
-        values = [row.get(col) for row in data if isinstance(row, dict) and row.get(col) is not None]
-        
-        non_null_count = len(values)
-        null_count = len(data) - non_null_count
-        
-        col_analysis = {
-            "type": "unknown",
-            "non_null_count": non_null_count,
-            "null_count": null_count,
-            "null_percentage": round((null_count / len(data)) * 100, 1) if len(data) > 0 else 0
-        }
-        
-        if values:
-            # 데이터 타입 판단
-            first_val = values[0]
-            if isinstance(first_val, (int, float)):
-                col_analysis["type"] = "numeric"
-                numeric_values = [float(v) for v in values if isinstance(v, (int, float))]
-                if numeric_values:
-                    col_analysis.update({
-                        "min": min(numeric_values),
-                        "max": max(numeric_values),
-                        "mean": round(sum(numeric_values) / len(numeric_values), 2),
-                        "median": round(sorted(numeric_values)[len(numeric_values)//2], 2),
-                        "sum": sum(numeric_values)
-                    })
-            elif isinstance(first_val, str):
-                col_analysis["type"] = "categorical"
-                unique_values = list(set(values))
-                col_analysis.update({
-                    "unique_count": len(unique_values),
-                    "most_common": max(set(values), key=values.count) if values else None,
-                    "top_values": dict(sorted(
-                        [(v, values.count(v)) for v in set(values)], 
-                        key=lambda x: x[1], reverse=True
-                    )[:5])
-                })
-        
-        analysis["columns"][col] = col_analysis
+    try:
+        for col in data[0].keys():
+            # 안전한 값 추출
+            values = []
+            for row in data:
+                if isinstance(row, dict) and col in row:
+                    val = row[col]
+                    if val is not None:
+                        values.append(val)
+            
+            non_null_count = len(values)
+            null_count = len(data) - non_null_count
+            
+            col_analysis = {
+                "type": "unknown",
+                "non_null_count": non_null_count,
+                "null_count": null_count,
+                "null_percentage": round((null_count / len(data)) * 100, 1) if len(data) > 0 else 0
+            }
+            
+            if values:
+                # 데이터 타입 판단
+                first_val = values[0]
+                if isinstance(first_val, (int, float)):
+                    col_analysis["type"] = "numeric"
+                    try:
+                        numeric_values = [float(v) for v in values if isinstance(v, (int, float))]
+                        if numeric_values:
+                            col_analysis.update({
+                                "min": min(numeric_values),
+                                "max": max(numeric_values),
+                                "mean": round(sum(numeric_values) / len(numeric_values), 2),
+                                "median": round(sorted(numeric_values)[len(numeric_values)//2], 2),
+                                "sum": sum(numeric_values)
+                            })
+                    except Exception as e:
+                        print(f"숫자 분석 중 오류: {e}")
+                        
+                elif isinstance(first_val, str):
+                    col_analysis["type"] = "categorical"
+                    try:
+                        unique_values = list(set(values))
+                        col_analysis.update({
+                            "unique_count": len(unique_values),
+                            "most_common": max(set(values), key=values.count) if values else None,
+                            "top_values": dict(sorted(
+                                [(v, values.count(v)) for v in set(values[:100])], # 성능을 위해 상위 100개만 처리
+                                key=lambda x: x[1], reverse=True
+                            )[:5])
+                        })
+                    except Exception as e:
+                        print(f"카테고리 분석 중 오류: {e}")
+                        col_analysis["unique_count"] = len(set(str(v) for v in values[:100]))
+            
+            analysis["columns"][col] = col_analysis
+            
+    except Exception as e:
+        print(f"데이터 구조 분석 중 오류: {e}")
+        analysis["patterns"].append(f"분석 중 오류 발생: {str(e)}")
     
     return analysis
 
