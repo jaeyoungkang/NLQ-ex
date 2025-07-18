@@ -557,72 +557,95 @@ def generate_fallback_html(question, query_results):
     </html>
     """
 
+def safe_json_serialize(obj):
+    """JSON 직렬화를 안전하게 수행하는 함수"""
+    try:
+        if isinstance(obj, dict):
+            return {str(k): safe_json_serialize(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [safe_json_serialize(item) for item in obj]
+        elif isinstance(obj, (datetime, )):
+            return obj.isoformat()
+        elif hasattr(obj, 'isoformat'):
+            return obj.isoformat()
+        elif isinstance(obj, (int, float, str, bool)) or obj is None:
+            return obj
+        else:
+            return str(obj)
+    except Exception as e:
+        print(f"JSON 직렬화 오류: {e}")
+        return str(obj)
+
 def generate_html_analysis_report(question, sql_query, query_results):
     """Claude가 완전한 HTML 분석 리포트 생성 (검증 포함)"""
     if not anthropic_client:
         raise Exception("Anthropic 클라이언트가 초기화되지 않았습니다.")
     
-    if not query_results or len(query_results) == 0:
-        return {
-            "html_content": generate_fallback_html(question, []),
-            "quality_score": 60,
-            "attempts": 1,
-            "fallback": True
-        }
-    
-    # 데이터 타입 안전성 확인
-    if not isinstance(query_results, list):
-        print(f"경고: query_results가 리스트가 아닙니다: {type(query_results)}")
-        return {
-            "html_content": generate_fallback_html(question, []),
-            "quality_score": 60,
-            "attempts": 1,
-            "fallback": True
-        }
-    
-    # 데이터 준비
-    sample_data = query_results[:10] if len(query_results) > 10 else query_results
-    
-    # 컬럼 추출 시 안전성 확인
-    columns = []
-    if sample_data and len(sample_data) > 0:
-        if isinstance(sample_data[0], dict):
-            columns = list(sample_data[0].keys())
-        else:
-            print(f"경고: 첫 번째 데이터 행이 딕셔너리가 아닙니다: {type(sample_data[0])}")
+    # 안전한 데이터 타입 검증
+    try:
+        if not query_results:
+            query_results = []
+        elif not isinstance(query_results, list):
+            print(f"경고: query_results가 리스트가 아닙니다: {type(query_results)}")
+            query_results = []
+        
+        if len(query_results) == 0:
+            return {
+                "html_content": generate_fallback_html(question, []),
+                "quality_score": 60,
+                "attempts": 1,
+                "fallback": True
+            }
+        
+        # 첫 번째 행 검증
+        if query_results and not isinstance(query_results[0], dict):
+            print(f"경고: 첫 번째 데이터 행이 딕셔너리가 아닙니다: {type(query_results[0])}")
             return {
                 "html_content": generate_fallback_html(question, query_results),
                 "quality_score": 60,
                 "attempts": 1,
                 "fallback": True
             }
-    
-    # Chart.js용 데이터 변환 (안전하게)
-    chart_data = []
-    chart_labels = []
-    try:
-        if len(columns) >= 2 and sample_data:
-            chart_labels = []
-            chart_data = []
-            
-            for row in sample_data:
-                if isinstance(row, dict) and columns[0] in row:
-                    chart_labels.append(str(row[columns[0]]) if row[columns[0]] is not None else "")
-                    
-                    if len(columns) >= 2 and columns[1] in row:
-                        value = row[columns[1]]
-                        if isinstance(value, (int, float)):
-                            chart_data.append(value)
-                        else:
-                            chart_data.append(0)
-                    else:
-                        chart_data.append(0)
-    except Exception as e:
-        print(f"차트 데이터 변환 중 오류: {e}")
+        
+        # 데이터 준비 (안전하게)
+        sample_data = query_results[:10] if len(query_results) > 10 else query_results
+        columns = list(sample_data[0].keys()) if sample_data and isinstance(sample_data[0], dict) else []
+        
+        # Chart.js용 데이터 변환 (안전하게)
         chart_data = []
         chart_labels = []
-
-    analysis_prompt = f"""다음 GA4 데이터 분석 결과를 완전한 HTML 페이지로 생성해주세요.
+        
+        if len(columns) >= 2 and sample_data:
+            try:
+                for row in sample_data:
+                    if isinstance(row, dict) and columns[0] in row:
+                        # 라벨 처리
+                        label_value = row[columns[0]]
+                        chart_labels.append(str(label_value) if label_value is not None else "")
+                        
+                        # 값 처리
+                        if len(columns) >= 2 and columns[1] in row:
+                            value = row[columns[1]]
+                            if isinstance(value, (int, float)):
+                                chart_data.append(value)
+                            else:
+                                try:
+                                    chart_data.append(float(value))
+                                except (ValueError, TypeError):
+                                    chart_data.append(0)
+                        else:
+                            chart_data.append(0)
+            except Exception as e:
+                print(f"차트 데이터 변환 중 오류: {e}")
+                chart_data = []
+                chart_labels = []
+        
+        # 안전한 JSON 직렬화를 위한 데이터 정리
+        safe_sample_data = safe_json_serialize(sample_data[:3])
+        safe_chart_labels = safe_json_serialize(chart_labels[:5])
+        safe_chart_data = safe_json_serialize(chart_data[:5])
+        
+        analysis_prompt = f"""다음 GA4 데이터 분석 결과를 완전한 HTML 페이지로 생성해주세요.
 
 **원본 질문:** {question}
 
@@ -635,12 +658,12 @@ def generate_html_analysis_report(question, sql_query, query_results):
 - 총 행 수: {len(query_results)}개
 - 컬럼: {', '.join(columns) if columns else '없음'}
 
-**샘플 데이터:**
-{json.dumps(sample_data[:3], indent=2, ensure_ascii=False, default=str)}
+**샘플 데이터 (상위 3개):**
+{json.dumps(safe_sample_data, indent=2, ensure_ascii=False)}
 
 **차트 데이터:**
-- Labels: {chart_labels[:5]}  (상위 5개만 표시)
-- Data: {chart_data[:5]}     (상위 5개만 표시)
+- Labels: {safe_chart_labels}
+- Data: {safe_chart_data}
 
 다음 요구사항에 맞는 완전한 HTML을 생성해주세요:
 
@@ -650,7 +673,7 @@ def generate_html_analysis_report(question, sql_query, query_results):
 4. **반응형 디자인** (모바일 대응)
 5. **구조화된 분석 리포트** (핵심 인사이트, 통계, 비즈니스 시사점)
 
-HTML 구조 예시:
+HTML 구조:
 ```html
 <!DOCTYPE html>
 <html lang="ko">
@@ -660,48 +683,13 @@ HTML 구조 예시:
     <title>{question} - GA4 분석 리포트</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
-        body {{ font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }}
-        .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
-        .header {{ text-align: center; margin-bottom: 30px; }}
-        .summary-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }}
-        .summary-card {{ background: linear-gradient(135deg, #4285f4, #34a853); color: white; padding: 20px; border-radius: 8px; text-align: center; }}
-        .chart-container {{ margin: 30px 0; }}
-        .analysis-section {{ margin: 30px 0; }}
-        .insight-item {{ background: #f8f9fa; padding: 15px; margin: 10px 0; border-left: 4px solid #4285f4; border-radius: 4px; }}
-        @media (max-width: 768px) {{ .container {{ padding: 15px; }} .summary-grid {{ grid-template-columns: 1fr; }} }}
+        /* 필요한 모든 CSS 스타일 */
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>📊 {question}</h1>
-            <p>GA4 데이터 분석 리포트 • {len(query_results)}개 결과</p>
-        </div>
-        
-        <!-- 요약 카드들 자동 생성 -->
-        <div class="summary-grid">
-            <!-- 데이터 기반 요약 정보 -->
-        </div>
-        
-        <!-- 차트 섹션 -->
-        <div class="chart-container">
-            <h2>📈 데이터 시각화</h2>
-            <canvas id="analysisChart" style="max-height: 400px;"></canvas>
-        </div>
-        
-        <!-- 분석 리포트 -->
-        <div class="analysis-section">
-            <h2>🎯 핵심 인사이트</h2>
-            <!-- 구체적인 분석 내용 -->
-        </div>
-    </div>
-    
+    <!-- 완전한 HTML 콘텐츠 -->
     <script>
-        // Chart.js 코드 자동 생성
-        const ctx = document.getElementById('analysisChart').getContext('2d');
-        new Chart(ctx, {{
-            // 데이터에 맞는 차트 설정
-        }});
+        // Chart.js 구현
     </script>
 </body>
 </html>
@@ -716,52 +704,62 @@ HTML 구조 예시:
 
 완전한 HTML 코드만 반환해주세요."""
 
-    max_attempts = 2
-    
-    for attempt in range(max_attempts):
-        try:
-            response = anthropic_client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=4000,
-                messages=[
-                    {"role": "user", "content": analysis_prompt}
-                ]
-            )
-            
-            html_content = response.content[0].text.strip()
-            
-            # HTML 태그 확인 및 정리
-            if not html_content.startswith('<!DOCTYPE') and not html_content.startswith('<html'):
-                # Claude가 마크다운 블록으로 감쌌을 수 있음
-                if '```html' in html_content:
-                    html_content = html_content.split('```html')[1].split('```')[0].strip()
-                elif '```' in html_content:
-                    html_content = html_content.split('```')[1].strip()
-            
-            # HTML 품질 검증
-            validation = validate_claude_html(html_content)
-            
-            if validation["is_valid"] or validation["score"] >= 70:
-                return {
-                    "html_content": html_content,
-                    "quality_score": validation["score"],
-                    "attempts": attempt + 1,
-                    "issues": validation["issues"]
-                }
-            
-            if attempt < max_attempts - 1:
-                print(f"HTML 품질 개선 필요 (점수: {validation['score']}), 재시도 중...")
+        max_attempts = 2
+        
+        for attempt in range(max_attempts):
+            try:
+                response = anthropic_client.messages.create(
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=4000,
+                    messages=[
+                        {"role": "user", "content": analysis_prompt}
+                    ]
+                )
                 
-        except Exception as e:
-            print(f"HTML 생성 시도 {attempt + 1} 실패: {str(e)}")
-    
-    # 모든 시도 실패 시 폴백
-    return {
-        "html_content": generate_fallback_html(question, query_results),
-        "quality_score": 60,
-        "attempts": max_attempts,
-        "fallback": True
-    }
+                html_content = response.content[0].text.strip()
+                
+                # HTML 태그 확인 및 정리
+                if not html_content.startswith('<!DOCTYPE') and not html_content.startswith('<html'):
+                    # Claude가 마크다운 블록으로 감쌌을 수 있음
+                    if '```html' in html_content:
+                        html_content = html_content.split('```html')[1].split('```')[0].strip()
+                    elif '```' in html_content:
+                        html_content = html_content.split('```')[1].strip()
+                
+                # HTML 품질 검증
+                validation = validate_claude_html(html_content)
+                
+                if validation["is_valid"] or validation["score"] >= 70:
+                    return {
+                        "html_content": html_content,
+                        "quality_score": validation["score"],
+                        "attempts": attempt + 1,
+                        "issues": validation.get("issues", []),
+                        "fallback": False
+                    }
+                
+                if attempt < max_attempts - 1:
+                    print(f"HTML 품질 개선 필요 (점수: {validation['score']}), 재시도 중...")
+                    
+            except Exception as e:
+                print(f"HTML 생성 시도 {attempt + 1} 실패: {str(e)}")
+        
+        # 모든 시도 실패 시 폴백
+        return {
+            "html_content": generate_fallback_html(question, query_results),
+            "quality_score": 60,
+            "attempts": max_attempts,
+            "fallback": True
+        }
+        
+    except Exception as e:
+        print(f"HTML 분석 리포트 생성 중 예상치 못한 오류: {e}")
+        return {
+            "html_content": generate_fallback_html(question, []),
+            "quality_score": 50,
+            "attempts": 1,
+            "fallback": True
+        }
 
 # API 엔드포인트들
 
@@ -769,7 +767,22 @@ HTML 구조 예시:
 def quick_query():
     """빠른 조회 - 데이터만 반환"""
     try:
-        question = request.json['question']
+        # 요청 검증
+        if not request.json or 'question' not in request.json:
+            return jsonify({
+                "success": False,
+                "error": "요청 본문에 'question' 필드가 필요합니다.",
+                "mode": "quick"
+            }), 400
+
+        question = request.json['question'].strip()
+        
+        if not question:
+            return jsonify({
+                "success": False,
+                "error": "질문이 비어있습니다.",
+                "mode": "quick"
+            }), 400
         
         # SQL 생성 및 데이터 조회
         sql_query = natural_language_to_sql(question)
@@ -779,7 +792,9 @@ def quick_query():
             return jsonify({
                 "success": False,
                 "error": query_result["error"],
-                "mode": "quick"
+                "mode": "quick",
+                "original_question": question,
+                "generated_sql": sql_query
             }), 500
         
         return jsonify({
@@ -792,6 +807,7 @@ def quick_query():
         })
         
     except Exception as e:
+        print(f"빠른 조회 중 오류: {str(e)}")
         return jsonify({
             "success": False,
             "error": f"서버 오류: {str(e)}",
@@ -802,7 +818,22 @@ def quick_query():
 def structured_analysis():
     """구조화된 분석 - 차트와 분석 리포트 포함"""
     try:
-        question = request.json['question']
+        # 요청 검증
+        if not request.json or 'question' not in request.json:
+            return jsonify({
+                "success": False,
+                "error": "요청 본문에 'question' 필드가 필요합니다.",
+                "mode": "structured"
+            }), 400
+
+        question = request.json['question'].strip()
+        
+        if not question:
+            return jsonify({
+                "success": False,
+                "error": "질문이 비어있습니다.",
+                "mode": "structured"
+            }), 400
         
         # SQL 생성 및 데이터 조회
         sql_query = natural_language_to_sql(question)
@@ -812,7 +843,9 @@ def structured_analysis():
             return jsonify({
                 "success": False,
                 "error": query_result["error"],
-                "mode": "structured"
+                "mode": "structured",
+                "original_question": question,
+                "generated_sql": sql_query
             }), 500
         
         # 구조화된 분석 리포트 생성
@@ -835,6 +868,7 @@ def structured_analysis():
         })
         
     except Exception as e:
+        print(f"구조화된 분석 중 오류: {str(e)}")
         return jsonify({
             "success": False,
             "error": f"서버 오류: {str(e)}",
@@ -853,9 +887,9 @@ def creative_html_analysis():
                 "mode": "creative_html"
             }), 400
 
-        question = request.json['question']
+        question = request.json['question'].strip()
         
-        if not question.strip():
+        if not question:
             return jsonify({
                 "success": False,
                 "error": "질문이 비어있습니다.",
@@ -869,7 +903,8 @@ def creative_html_analysis():
             return jsonify({
                 "success": False,
                 "error": f"SQL 변환 중 오류: {str(e)}",
-                "mode": "creative_html"
+                "mode": "creative_html",
+                "original_question": question
             }), 500
         
         query_result = execute_bigquery(sql_query)
@@ -917,14 +952,6 @@ def creative_html_analysis():
             "attempts": html_result["attempts"],
             "is_fallback": html_result.get("fallback", False)
         })
-        
-    except Exception as e:
-        print(f"창의적 HTML 분석 중 예상치 못한 오류: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": f"서버 오류: {str(e)}",
-            "mode": "creative_html"
-        }), 500
         
     except Exception as e:
         print(f"창의적 HTML 분석 중 예상치 못한 오류: {str(e)}")
