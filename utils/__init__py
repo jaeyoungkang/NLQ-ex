@@ -1,0 +1,25 @@
+# utils/__init__.py
+"""
+유틸리티 패키지 초기화
+"""
+
+from .data_utils import (
+    safe_json_serialize,
+    suggest_chart_config,
+    analyze_data_structure,
+    generate_summary_insights
+)
+
+from .html_utils import (
+    validate_claude_html,
+    generate_fallback_html
+)
+
+__all__ = [
+    'safe_json_serialize',
+    'suggest_chart_config',
+    'analyze_data_structure',
+    'generate_summary_insights',
+    'validate_claude_html',
+    'generate_fallback_html'
+]
