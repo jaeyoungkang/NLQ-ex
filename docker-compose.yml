@@ -21,7 +21,6 @@ services:
       - "8081:8081"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
     volumes:
       - ./credentials.json:/app/credentials.json
 
