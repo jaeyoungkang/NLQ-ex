@@ -21,8 +21,6 @@ services:
       - "8081:8081"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    volumes:
-      - ./credentials.json:/app/credentials.json
 
   analysis-service:
     build: ./services/analysis-service
