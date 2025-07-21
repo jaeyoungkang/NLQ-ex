@@ -4,6 +4,7 @@ from google.cloud import bigquery
 import anthropic
 import os
 import json
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -55,6 +56,20 @@ TABLE_SCHEMA = {
         ]
     }
 }
+
+def get_schema_prompt():
+    """스키마 정보를 프롬프트 형태로 반환"""
+    return f"""
+    테이블: `{PROJECT_ID}.test_dataset.events_20201121`
+    
+    주요 컬럼:
+    - event_name: 이벤트 유형 (page_view, purchase, add_to_cart 등)
+    - user_pseudo_id: 익명 사용자 ID
+    - device.category: 기기 유형 (mobile, desktop, tablet)
+    - geo.country: 국가
+    - event_timestamp: 이벤트 발생 시간 (마이크로초)
+    - ecommerce.purchase_revenue_in_usd: 구매 매출
+    """
 
 def natural_language_to_sql(question):
     """자연어 질문을 BigQuery SQL로 변환"""
@@ -173,6 +188,11 @@ def execute_bigquery(sql_query):
         }
         
     except Exception as e:
+        print(f"BigQuery 실행 중 오류: {e}")  # 디버깅용
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 @app.route('/quick', methods=['POST'])
 def quick_query():
