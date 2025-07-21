@@ -10,19 +10,6 @@ const loading = document.getElementById('loading');
 const loadingText = document.getElementById('loadingText');
 const resultsSection = document.getElementById('resultsSection');
 
-let selectedMode = 'structured';
-
-// 모드 선택 카드 이벤트
-document.querySelectorAll('.mode-card').forEach(card => {
-    card.addEventListener('click', function() {
-        // 기존 선택 제거
-        document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
-        // 새 선택 추가
-        this.classList.add('selected');
-        selectedMode = this.dataset.mode;
-    });
-});
-
 // 예시 질문 설정 함수
 function setQuestion(question) {
     questionInput.value = question;
@@ -32,7 +19,7 @@ function setQuestion(question) {
 // Enter 키로 질문 전송 (Ctrl+Enter)
 questionInput.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.key === 'Enter') {
-        executeQuery(selectedMode);
+        executeQuery('structured'); // 기본값을 structured로 설정
     }
 });
 
