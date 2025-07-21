@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GA4 자연어 분석</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/chart.js"></script>
+    <script src="js/table.js"></script>
+    <script src="data/examples.js"></script>
+    <script src="js/app.js"></script>
+</head>
+<body class="bg-gray-50 font-google text-gray-800 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-12 px-4 rounded-b-3xl mx-4 mt-4 shadow-xl">
+        <div class="max-w-6xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-light mb-4 tracking-tight">🔍 GA4 자연어 분석</h1>
+            <p class="text-lg md:text-xl opacity-90 font-light">Google Analytics 4 데이터를 자연어로 질문하고 AI가 분석해드립니다</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Info Box -->
+        <div id="infoBox" class="bg-blue-50 border-l-4 border-google-blue rounded-lg p-4 mb-8"></div>
+
+        <!-- Query Section -->
+        <section id="querySection" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 mb-8"></section>
+
+        <!-- Examples Section -->
+        <section id="examplesSection" class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8 mb-8"></section>
+
+        <!-- Results Section -->
+        <section id="results" class="hidden bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"></section>
+
+        <!-- Message Container -->
+        <div id="messageContainer" class="fixed top-4 right-4 z-50"></div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-8 text-gray-500 text-sm">
+        <p>© 2024 GA4 자연어 분석 시스템 | Powered by Claude Sonnet 4 & BigQuery</p>
+    </footer>
+</body>
+</html>
