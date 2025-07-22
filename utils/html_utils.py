@@ -44,24 +44,40 @@ def generate_fallback_html(question, query_results):
     if result_count > 0 and isinstance(query_results[0], dict):
         try:
             headers = list(query_results[0].keys())
-            table_html = f"""
+            
+            # 헤더 생성
+            header_cells = []
+            for col in headers:
+                header_cells.append("<th>" + str(col) + "</th>")
+            header_html = "".join(header_cells)
+            
+            # 본문 생성 (최대 10개 행)
+            body_rows = []
+            for row in query_results[:10]:
+                row_cells = []
+                for col in headers:
+                    cell_value = str(row.get(col, ""))
+                    row_cells.append("<td>" + cell_value + "</td>")
+                row_html = "<tr>" + "".join(row_cells) + "</tr>"
+                body_rows.append(row_html)
+            body_html = "".join(body_rows)
+            
+            # 전체 테이블 조립
+            table_html = """
             <table class="data-table">
                 <thead>
                     <tr>
-                        {''.join([f'<th>{str(col)}</th>' for col in headers])}
+                        """ + header_html + """
                     </tr>
                 </thead>
                 <tbody>
-                    {''.join([
-                        f"<tr>{''.join([f'<td>{str(row.get(col, ""))}</td>' for col in headers])}</tr>" 
-                        for row in query_results[:10]
-                    ])}
+                    """ + body_html + """
                 </tbody>
             </table>
             """
         except Exception as e:
-            print(f"폴백 테이블 생성 중 오류: {e}")
-            table_html = f"<p>데이터 표시 중 오류가 발생했습니다: {str(e)}</p>"
+            print("폴백 테이블 생성 중 오류: " + str(e))
+            table_html = "<p>데이터 표시 중 오류가 발생했습니다: " + str(e) + "</p>"
     else:
         table_html = "<p>표시할 데이터가 없습니다.</p>"
     
