@@ -77,7 +77,14 @@ function setLoadingState(isLoading, mode = '') {
     quickBtn.disabled = isLoading;
     structuredBtn.disabled = isLoading;
     creativeBtn.disabled = isLoading;
-    loading.style.display = isLoading ? 'flex' : 'none';
+    
+    if (isLoading) {
+        loading.classList.add('flex');
+        loading.classList.remove('hidden');
+    } else {
+        loading.classList.remove('flex');
+        loading.classList.add('hidden');
+    }
     
     if (isLoading) {
         const messages = {
@@ -87,18 +94,24 @@ function setLoadingState(isLoading, mode = '') {
         };
         loadingText.textContent = messages[mode] || '데이터를 처리하고 있습니다...';
         
-        const btnTexts = {
-            'quick': '⏳ 조회 중...',
-            'structured': '⏳ 분석 중...',
-            'creative': '⏳ 생성 중...'
-        };
-        quickBtn.innerHTML = btnTexts['quick'];
-        structuredBtn.innerHTML = btnTexts['structured'];
-        creativeBtn.innerHTML = btnTexts['creative'];
+        // 버튼 텍스트 변경
+        quickBtn.innerHTML = '<span class="btn-main-text">⏳ 조회 중...</span>';
+        structuredBtn.innerHTML = '<span class="btn-main-text">⏳ 분석 중...</span>';
+        creativeBtn.innerHTML = '<span class="btn-main-text">⏳ 생성 중...</span>';
     } else {
-        quickBtn.innerHTML = '⚡ 빠른 조회<div class="btn-description">데이터만 빠르게</div>';
-        structuredBtn.innerHTML = '📊 구조화 분석<div class="btn-description">차트 + 리포트</div>';
-        creativeBtn.innerHTML = '🎨 창의적 HTML<div class="btn-description">독립 문서 생성</div>';
+        // 원래 버튼 텍스트 복원
+        quickBtn.innerHTML = `
+            <span class="btn-main-text">⚡ 빠른 조회</span>
+            <div class="btn-description">데이터만 빠르게</div>
+        `;
+        structuredBtn.innerHTML = `
+            <span class="btn-main-text">📊 구조화 분석</span>
+            <div class="btn-description">차트 + 리포트</div>
+        `;
+        creativeBtn.innerHTML = `
+            <span class="btn-main-text">🎨 창의적 HTML</span>
+            <div class="btn-description">독립 문서 생성</div>
+        `;
     }
 }
 
@@ -128,7 +141,7 @@ function displayQuickResults(data) {
             </div>
             <div class="generated-sql">
                 <strong>생성된 SQL:</strong><br>
-                ${escapeHtml(data.generated_sql)}
+                <code>${escapeHtml(data.generated_sql)}</code>
             </div>
         </div>
 
@@ -161,9 +174,9 @@ function displayCreativeHtmlResults(data) {
         </div>
         
         <div class="html-controls">
-            <button onclick="openInNewWindow()" class="btn btn-structured">🔗 새 창에서 열기</button>
-            <button onclick="downloadHtml()" class="btn btn-quick">💾 HTML 다운로드</button>
-            ${data.is_fallback ? '<button onclick="regenerateHtml()" class="btn btn-creative">🔄 재생성</button>' : ''}
+            <button onclick="openInNewWindow()">🔗 새 창에서 열기</button>
+            <button onclick="downloadHtml()">💾 HTML 다운로드</button>
+            ${data.is_fallback ? '<button onclick="regenerateHtml()">🔄 재생성</button>' : ''}
         </div>
         
         ${data.is_fallback ? `
@@ -244,14 +257,19 @@ function createTable(data) {
         `<th>${escapeHtml(header)}</th>`
     ).join('');
 
-    // 행 생성
-    const rowsHtml = data.map(row => {
+    // 행 생성 (최대 50개까지만 표시)
+    const displayData = data.slice(0, 50);
+    const rowsHtml = displayData.map(row => {
         const cellsHtml = headers.map(header => {
             const value = row[header];
             return `<td>${formatCellValue(value)}</td>`;
         }).join('');
         return `<tr>${cellsHtml}</tr>`;
     }).join('');
+
+    const hasMoreData = data.length > 50;
+    const moreDataMessage = hasMoreData ? 
+        `<div class="table-footer">📊 ${data.length}개 중 50개만 표시됩니다. 전체 결과를 보려면 "창의적 HTML" 모드를 사용하세요.</div>` : '';
 
     return `
         <table>
@@ -262,6 +280,7 @@ function createTable(data) {
                 ${rowsHtml}
             </tbody>
         </table>
+        ${moreDataMessage}
     `;
 }
 
@@ -286,7 +305,13 @@ function formatCellValue(value) {
         }
     }
     
-    return escapeHtml(String(value));
+    // 긴 텍스트는 잘라서 표시
+    const stringValue = String(value);
+    if (stringValue.length > 100) {
+        return `<span title="${escapeHtml(stringValue)}">${escapeHtml(stringValue.substring(0, 100))}...</span>`;
+    }
+    
+    return escapeHtml(stringValue);
 }
 
 // 오류 표시
@@ -301,7 +326,14 @@ function displayError(errorMessage, mode) {
         <div class="error">
             <h3>❌ ${modeLabels[mode]} 오류 발생</h3>
             <p>${escapeHtml(errorMessage)}</p>
-            <p><small>서버 로그를 확인하거나 다른 질문을 시도해보세요.</small></p>
+            <div style="margin-top: 1rem;">
+                <p><small>💡 문제 해결 방법:</small></p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>질문을 더 구체적으로 작성해보세요</li>
+                    <li>다른 예시 질문을 시도해보세요</li>
+                    <li>서버 로그를 확인하거나 관리자에게 문의하세요</li>
+                </ul>
+            </div>
         </div>
     `;
 
@@ -334,7 +366,57 @@ questionInput.addEventListener('focus', function() {
     }
 });
 
+// 질문 입력창에서 포커스 아웃 시 기본 placeholder로 복원
+questionInput.addEventListener('blur', function() {
+    if (!this.value) {
+        this.placeholder = "예: 한국 사용자들의 page_view 이벤트 수를 알려주세요";
+    }
+});
+
 // 페이지 로드 시 질문 입력창에 포커스
 window.addEventListener('load', function() {
     questionInput.focus();
+    
+    // 서비스 워커가 있다면 등록 (PWA 지원)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            // 서비스 워커 등록 실패는 무시
+        });
+    }
+});
+
+// 키보드 단축키 지원
+document.addEventListener('keydown', function(e) {
+    // Alt + 1: 빠른 조회
+    if (e.altKey && e.key === '1') {
+        e.preventDefault();
+        if (!quickBtn.disabled) executeQuery('quick');
+    }
+    // Alt + 2: 구조화 분석
+    else if (e.altKey && e.key === '2') {
+        e.preventDefault();
+        if (!structuredBtn.disabled) executeQuery('structured');
+    }
+    // Alt + 3: 창의적 HTML
+    else if (e.altKey && e.key === '3') {
+        e.preventDefault();
+        if (!creativeBtn.disabled) executeQuery('creative');
+    }
+    // Esc: 질문 입력창 클리어
+    else if (e.key === 'Escape' && document.activeElement === questionInput) {
+        questionInput.value = '';
+    }
+});
+
+// 자동 저장 기능 (로컬 스토리지)
+questionInput.addEventListener('input', function() {
+    localStorage.setItem('ga4_last_question', this.value);
+});
+
+// 페이지 로드 시 마지막 질문 복원
+window.addEventListener('load', function() {
+    const lastQuestion = localStorage.getItem('ga4_last_question');
+    if (lastQuestion && lastQuestion.trim()) {
+        questionInput.value = lastQuestion;
+    }
 });
