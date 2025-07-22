@@ -53,7 +53,7 @@ def generate_fallback_html(question, query_results):
                 </thead>
                 <tbody>
                     {''.join([
-                        f"<tr>{''.join([f'<td>{str(row.get(col, ''))}</td>' for col in headers])}</tr>" 
+                        f"<tr>{''.join([f'<td>{str(row.get(col, ""))}</td>' for col in headers])}</tr>" 
                         for row in query_results[:10]
                     ])}
                 </tbody>
