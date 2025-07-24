@@ -113,6 +113,112 @@
     display: flex;
 }
 
+/* 처리 과정 모니터링 스타일 */
+.process-monitor {
+    background: #f8faff;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    display: none;
+}
+
+.process-step {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.process-step:last-child {
+    border-bottom: none;
+}
+
+.step-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.step-icon.pending {
+    background: #e2e8f0;
+    color: #64748b;
+}
+
+.step-icon.processing {
+    background: #3b82f6;
+    color: white;
+    animation: pulse 2s infinite;
+}
+
+.step-icon.completed {
+    background: #10b981;
+    color: white;
+}
+
+.step-icon.error {
+    background: #ef4444;
+    color: white;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-title {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.25rem;
+}
+
+.step-description {
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.step-time {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin-left: auto;
+}
+
+/* 고급 분석 옵션 스타일 */
+.analysis-options {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    display: none;
+}
+
+.analysis-options.show {
+    display: block;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* 결과 테이블 스타일 */
 table {
     width: 100%;
