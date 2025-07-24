@@ -8,7 +8,7 @@ const structuredBtn = document.getElementById('structuredBtn');
 const creativeBtn = document.getElementById('creativeBtn');
 const processMonitor = document.getElementById('processMonitor');
 const processSteps = document.getElementById('processSteps');
-const resultsSection = document.getElementById('resultsSection');
+const conversationHistory = document.getElementById('conversationHistory'); // 변경: resultsSection → conversationHistory
 const analysisOptions = document.getElementById('analysisOptions');
 
 let currentStepId = 0;
@@ -281,7 +281,7 @@ function showQueryGenerationStatus(message) {
             </div>
         </div>
     `;
-    resultsSection.innerHTML = statusHtml;
+    conversationHistory.insertAdjacentHTML('beforeend', statusHtml);
 }
 
 // 2단계: 생성된 쿼리 표시
@@ -312,7 +312,7 @@ function showDataQueryStatus(message) {
             </div>
         </div>
     `;
-    resultsSection.insertAdjacentHTML('beforeend', statusHtml);
+    conversationHistory.insertAdjacentHTML('beforeend', statusHtml);
 }
 
 // 빠른 조회 결과 표시 (수정된 버전)
@@ -346,7 +346,7 @@ function displayQuickResults(data) {
     `;
 
     // 기존 내용에 결과를 추가
-    resultsSection.insertAdjacentHTML('beforeend', resultHtml);
+    conversationHistory.insertAdjacentHTML('beforeend', resultHtml);
     
     // 결과 섹션으로 부드러운 스크롤
     setTimeout(() => {
@@ -728,7 +728,7 @@ function parseMarkdown(text) {
 // 오류 표시
 function displayError(errorMessage, mode) {
     const modeLabels = {
-        'quick': '빠른 조회',
+        'quick': '조회',
         'structured': '구조화 분석',
         'creative': '창의적 HTML'
     };
@@ -748,7 +748,7 @@ function displayError(errorMessage, mode) {
         </div>
     `;
 
-    resultsSection.innerHTML = errorHtml;
+    conversationHistory.insertAdjacentHTML('beforeend', errorHtml);
 }
 
 // HTML 이스케이프
