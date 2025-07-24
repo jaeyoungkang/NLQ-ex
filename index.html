@@ -42,10 +42,11 @@
                 📅 <strong>데이터 범위:</strong> 2020년 11월 21일 GA4 이벤트 데이터 | 
                 🏢 <strong>데이터 소스:</strong> nlq-ex.test_dataset.events_20201121
             </div>
+            
             <!-- 푸터 -->
-        <div class="py-6 text-sm text-gray-600">
-            <p>💡 <strong>팁:</strong> GA4 공개 데이터를 기반으로한 샘플 페이지 입니다. </p>
-        </div>
+            <div class="py-6 text-sm text-gray-600">
+                <p>💡 <strong>팁:</strong> GA4 공개 데이터를 기반으로한 샘플 페이지 입니다. </p>
+            </div>
 
             <!-- 예시 질문들 -->
             <div class="bg-gray-50 border-l-4 border-google-blue p-5 rounded-xl mb-5">
@@ -85,25 +86,45 @@
                     ></textarea>
                 </div>
 
-                <div class="flex flex-wrap gap-4 items-start">
+                <!-- 1단계: 빠른 조회만 활성화 -->
+                <div class="flex flex-wrap gap-4 items-start" id="initialButtons">
                     <button id="quickBtn" class="btn-gradient-green">
                         <span class="btn-main-text">⚡ 빠른 조회</span>
-                        <div class="btn-description">데이터만 빠르게 표시</div>
+                        <div class="btn-description">데이터를 먼저 확인해보세요</div>
                     </button>
-                    <button id="structuredBtn" class="btn-gradient-blue">
-                        <span class="btn-main-text">📊 구조화 분석 (응답시간이 걸립니다)</span>
-                        <div class="btn-description"> 미리 정의된 형식의 리포트 생성</div>
-                    </button>
-                    <button id="creativeBtn" class="btn-gradient-orange">
-                        <span class="btn-main-text">🎨 LLM 분석 (응답시간이 걸립니다)</span>
-                        <div class="btn-description">LLM 자유롭게 분석 리포트 생성</div>
-                    </button>
+                    <div class="text-gray-500 text-sm flex items-center">
+                        💡 먼저 빠른 조회로 데이터를 확인한 후 고급 분석을 이용할 수 있습니다.
+                    </div>
                     
                     <!-- 로딩 상태 -->
                     <div class="loading hidden" id="loading">
                         <div class="spinner"></div>
                         <span id="loadingText">데이터를 조회하고 있습니다...</span>
                     </div>
+                </div>
+
+                <!-- 2단계: 고급 분석 옵션 (빠른 조회 후 표시) -->
+                <div class="analysis-options" id="analysisOptions">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-3">🎯 고급 분석 옵션</h4>
+                    <p class="text-sm text-gray-600 mb-4">데이터가 확인되었습니다. 이제 더 자세한 분석을 수행할 수 있습니다.</p>
+                    <div class="flex flex-wrap gap-4">
+                        <button id="structuredBtn" class="btn-gradient-blue" disabled>
+                            <span class="btn-main-text">📊 구조화 분석 (응답시간이 걸립니다)</span>
+                            <div class="btn-description"> 미리 정의된 형식의 리포트 생성</div>
+                        </button>
+                        <button id="creativeBtn" class="btn-gradient-orange" disabled>
+                            <span class="btn-main-text">🎨 LLM 분석 (응답시간이 걸립니다)</span>
+                            <div class="btn-description">LLM 자유롭게 분석 리포트 생성</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 처리 과정 모니터링 -->
+            <div class="process-monitor" id="processMonitor">
+                <h4 class="text-lg font-semibold text-gray-800 mb-4">🔍 처리 과정</h4>
+                <div class="space-y-2" id="processSteps">
+                    <!-- 처리 단계들이 여기에 동적으로 추가됩니다 -->
                 </div>
             </div>
 
@@ -113,7 +134,7 @@
                 <div class="text-center text-gray-500 py-10">
                     <div class="text-6xl mb-4">📊</div>
                     <h3 class="text-xl font-medium mb-2">분석 결과가 여기에 표시됩니다</h3>
-                    <p>위에서 질문을 입력하고 원하는 분석 모드를 클릭하세요.</p>
+                    <p>위에서 질문을 입력하고 "빠른 조회"를 클릭하여 시작하세요.</p>
                 </div>
             </div>
         </div>
