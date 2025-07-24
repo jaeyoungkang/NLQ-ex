@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>자연어-SQL 변환 및 분석 서비스 메커니즘</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" xintegrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* Basic body styling */
+        body {
+            font-family: 'Segoe UI', 'Noto Sans KR', sans-serif;
+            color: #374151; /* text-gray-700 */
+            background-color: #f3f4f6; /* bg-gray-100 */
+            scroll-behavior: smooth;
+        }
+
+        /* Styles for the main article container */
+        .article-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            background-color: white;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-radius: 16px;
+            overflow: hidden; /* Ensures child borders don't poke out of rounded corners */
+        }
+        @media (min-width: 768px) {
+            .article-container {
+                margin: 3rem auto;
+            }
+        }
+
+        /* Container for each section, now acting as an internal divider */
+        .page-section {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-bottom: 1px solid #e5e7eb; /* Separator line */
+        }
+        .page-section:last-child {
+            border-bottom: none; /* No line after the last section */
+        }
+        @media (min-width: 768px) {
+            .page-section {
+                padding: 4rem;
+            }
+        }
+
+        /* Common accent bar style */
+        .accent-bar {
+            height: 5px;
+            width: 70px;
+            background-color: #4285F4;
+            border-radius: 2.5px;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Technology icon styling */
+        .tech-icon {
+            font-size: 1.5rem;
+            padding: 12px;
+            color: #4285F4;
+            background-color: white;
+            border-radius: 50%;
+            margin: 0 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease-in-out;
+        }
+        .tech-icon:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Benefit item styling */
+        .benefit-item {
+            display: flex;
+            align-items: start;
+            margin-bottom: 24px;
+        }
+
+        .benefit-icon {
+            background-color: #e8f0fe;
+            color: #4285F4;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+
+        /* Q&A section styling */
+        .qa-section {
+            background-color: #f8fafc;
+            border-radius: 12px;
+            padding: 24px;
+            border-left: 4px solid #4285F4;
+            margin-top: 30px;
+        }
+        
+        /* Styles for the new vertical Architecture Diagram */
+        .diagram-node-vertical {
+            padding: 0.75rem; /* 12px */
+            border-radius: 0.75rem; /* 12px */
+            border-width: 2px;
+            width: 9rem; /* 144px */
+            min-width: 9rem;
+            text-align: center;
+        }
+        .node-frontend-v { background-color: #eff6ff; border-color: #3b82f6; }
+        .node-backend-v { background-color: #fef2f2; border-color: #ef4444; }
+        .node-claude-v { background-color: #f0fdf4; border-color: #22c55e; }
+        .node-bigquery-v { background-color: #fefce8; border-color: #eab308; }
+
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <main class="article-container">
+        <!-- Section 1: Title -->
+        <section class="page-section" id="section-1">
+            <div class="mt-8 pt-8 text-gray-500 text-sm">
+                <div>2025년 7월</div>
+            </div>
+            <div>
+                <div class="accent-bar"></div>
+                <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 text-gray-800">LLM을 활용한 자연어 빅쿼리 조회 및 분석</h1>
+                <p class="text-base sm:text-lg text-gray-600 mt-4">LLM을 활용하여 자연어 질문으로 BigQuery 데이터베이스를 조회하고 분석하는 시스템</p>
+            </div>
+            <div class="flex items-center justify-center sm:justify-start mt-12 mb-8 flex-wrap">
+                <div class="tech-icon"><i class="fas fa-comment-dots"></i></div>
+                <div class="text-gray-400 text-xl mx-2">→</div>
+                <div class="tech-icon"><i class="fas fa-robot"></i></div>
+                <div class="text-gray-400 text-xl mx-2">→</div>
+                <div class="tech-icon"><i class="fas fa-database"></i></div>
+                <div class="text-gray-400 text-xl mx-2">→</div>
+                <div class="tech-icon"><i class="fas fa-chart-line"></i></div>
+            </div>
+    
+            <div class="max-w-4xl mt-6">
+                <div class="grid gap-6">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-robot text-blue-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2">LLM(Claude, Gemini, ChatGPT)을 통한 자연어→SQL 변환</h3>
+                            <p class="text-gray-600">고도화된 AI 모델을 활용하여 복잡한 자연어 질문을 정확한 SQL 쿼리로 변환합니다.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fas fa-database text-green-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2"> 자연어로 Google BigQuery 데이터 조회</h3>
+                            <p class="text-gray-600"> 자연어로만 간편하게 원하는 빅쿼리 데이터 조회 (지난주 A 구매자 수는 몇명인가?)</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 h-12 bg-purple-100 rounded-lg flex items-center justify-center mr-4 px-4 space-x-3">
+                            <!-- Robot Icon -->
+                            <i class="fas fa-robot text-blue-600 text-xl"></i>
+                            <!-- Plus Icon (Added) -->
+                            <i class="fas fa-plus text-gray-500 text-base"></i>
+                            <!-- Database Icon -->
+                            <i class="fas fa-chart-line text-purple-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2"> LLM을 이용하여 사전정의된 분석 리포트 생성</h3>
+                            <p class="text-gray-600"> 조회한 데이터를 기반으로 사전에 정의한 분석 리포트 작성을 LLM 에게 요청 (주간 리뷰 리포트 작성) </p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 h-12 bg-purple-200 rounded-lg flex items-center justify-center mr-4 px-4 space-x-3">
+                            <!-- Robot Icon -->
+                            <i class="fas fa-robot text-blue-600 text-xl"></i>
+                            <!-- Plus Icon (Added) -->
+                            <i class="fas fa-plus text-gray-500 text-base"></i>
+                            <!-- Database Icon -->
+                            <i class="fas fa-chart-bar text-purple-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2"> LLM을 이용하여 자유 리포트 생성</h3>
+                            <p class="text-gray-600"> 조회한 데이터를 기반으로 LLM 에게 자연어로 자유롭게 분석 요청</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <section class="page-section" >
+            <div>
+                <div class="accent-bar"></div>
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-2"> 요청이 처리되는 과정 </h1>
+                <p class="text-gray-600">처리 주체 간의 소통을 중심으로 한 서비스 아키텍처</p>
+            </div>
+            
+            <!-- New Vertical Diagram -->
+            <div class="mt-12 w-1/2 flex flex-col items-center text-center font-sans bg-blue-100 diagram-node-vertical mx-auto">
+                <!-- Frontend Node -->
+                <div class="diagram-node-vertical node-frontend-v mt-4">
+                    <i class="fas fa-desktop text-2xl mb-2 text-blue-600"></i>
+                    <div class="font-bold text-lg">Frontend</div>
+                    <div class="text-sm text-gray-600">(Web Browser)</div>
+                </div>
+
+                <!-- Arrow 1 & 6 -->
+                <div class="h-20 w-full max-w-xs flex items-center justify-center gap-x-2">
+                    <div class="text-xs sm:text-sm text-gray-600 text-right bg">1. 자연어 질문</div>
+                    <i class="fas fa-long-arrow-alt-down text-2xl text-gray-400"></i>
+                    <i class="fas fa-long-arrow-alt-up text-2xl text-gray-400"></i>
+                    <div class="text-xs sm:text-sm text-gray-600 text-left">6. 결과 표시</div>
+                </div>
+
+                <!-- Backend Node -->
+                <div class="diagram-node-vertical node-backend-v">
+                    <i class="fas fa-server text-2xl mb-2 text-red-600"></i>
+                    <div class="font-bold text-lg">Backend</div>
+                    <div class="text-sm text-gray-600">(Flask Server)</div>
+                </div>
+
+                <!-- Branching lines -->
+                <div class="w-full max-w-sm h-10 relative mt-4">
+                <div class="absolute top-0 left-1/2 w-0.5 h-5 bg-gray-300 -ml-px"></div>
+                <div class="absolute top-5 left-1/4 w-1/2 h-0.5 bg-gray-300"></div>
+                <div class="absolute top-5 left-1/4 w-0.5 h-5 bg-gray-300 -ml-px"></div>
+                <div class="absolute top-5 right-1/4 w-0.5 h-5 bg-gray-300 -mr-px"></div>
+                </div>
+
+                <!-- Bottom Row: Claude & BigQuery -->
+                <div class="w-full flex flex-row justify-center items-start gap-x-4 sm:gap-x-8">
+                    <!-- Left Branch (Claude) -->
+                    <div class="flex flex-col items-center">
+                        <div class="h-10 w-full max-w-xs flex items-center justify-center gap-x-2">
+                            <div class="text-xs sm:text-sm text-gray-600 text-right bg">2. SQL 변환 요청</div>
+                            <i class="fas fa-long-arrow-alt-down text-2xl text-gray-400"></i>
+                            <i class="fas fa-long-arrow-alt-up text-2xl text-gray-400"></i>
+                            <div class="text-xs sm:text-sm text-gray-600 text-left">3. SQL 쿼리 반환</div>
+                        </div>
+                        <div class="diagram-node-vertical node-claude-v">
+                            <i class="fas fa-robot text-2xl mb-2 text-green-600"></i>
+                            <div class="font-bold text-base">Claude 3.5</div>
+                            <div class="text-xs text-gray-600">(AI Model)</div>
+                        </div>
+                        
+                    </div>
+
+                    <!-- Right Branch (BigQuery) -->
+                    <div class="flex flex-col items-center space-y-2">
+                        <div class="h-10 w-full max-w-xs flex items-center justify-center gap-x-2">
+                            <div class="text-xs sm:text-sm text-gray-600 text-right bg">4. SQL 실행</div>
+                            <i class="fas fa-long-arrow-alt-down text-2xl text-gray-400"></i>
+                            <i class="fas fa-long-arrow-alt-up text-2xl text-gray-400"></i>
+                            <div class="text-xs sm:text-sm text-gray-600 text-left">5. 데이터 반환</div>
+                        </div>
+                        <div class="diagram-node-vertical node-bigquery-v">
+                            <i class="fas fa-database text-2xl mb-2 text-yellow-600"></i>
+                            <div class="font-bold text-base">BigQuery</div>
+                            <div class="text-xs text-gray-600">(GCP Database)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 text-gray-500 text-sm mt-4">
+                    <i class="fab fa-google text-blue-500"></i>
+                    <span> Google Cloud Platform 에서 실행</span>
+                </div>
+            </div>
+
+            <!-- Description Box -->
+            <div class="mt-12 bg-blue-50 rounded-lg p-4 border border-blue-200 max-w-4xl mx-auto">
+                <div class="font-bold text-blue-800 mb-2 flex items-center"><i class="fas fa-info-circle mr-2"></i> 통신 구조 : Backend가 중앙 허브 역할을 하며 모든 구성요소와 양방향 통신합니다.</div>
+                <p class="text-gray-700 text-sm sm:text-base">
+                    - Backend가 Frontedn에서 에서 자연어 질문을 받아 Claude에게 SQL 변환을 요청하고, 생성된 SQL을 BigQuery에서 실행합니다. 
+                </p>
+                <p class="text-gray-700 text-sm sm:text-base">
+                    - BigQuery에서 데이터를 받은 Backend는 결과를 Frontedn로 전송하여 표시합니다
+                </p>
+            </div>
+        </section>
+
+        <!-- Section 4: End-to-End Process -->
+        <section class="page-section" id="section-4">
+            <div>
+                <div class="accent-bar"></div>
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">세부 절차</h1>
+                <p class="text-base sm:text-lg text-gray-600">사용자의 질문 입력부터 최종 분석 결과가 표시되기까지의 전체 과정을 단계별로 살펴봅니다.</p>
+            </div>
+            <div class="space-y-8 mt-8">
+                <!-- Step 1 -->
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4 text-blue-600 font-bold">1</div>
+                    <div>
+                        <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2">사용자 질문 입력 (Frontend)</h3>
+                        <p class="text-gray-600 mb-3">웹 브라우저의 텍스트 입력창에 "가장 많이 발생한 이벤트는?"과 같은 자연어 질문을 입력하거나 예시 질문을 선택합니다.</p>
+                    </div>
+                </div>
+                <!-- Step 2 -->
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4 text-blue-600 font-bold">2</div>
+                    <div>
+                        <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2">백엔드 API 요청 (Flask)</h3>
+                        <p class="text-gray-600 mb-3">선택된 분석 모드와 질문 내용을 Flask 백엔드의 해당 API 엔드포인트로 POST 요청을 전송합니다.</p>
+                    </div>
+                </div>
+                <!-- Step 3 -->
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4 text-blue-600 font-bold">3</div>
+                    <div>
+                        <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2">자연어 ➡️ SQL 변환 (Claude 3.5)</h3>
+                        <p class="text-gray-600 mb-3">시스템 프롬프트(테이블 스키마, SQL 생성 규칙)와 사용자 질문을 Claude 모델로 전달하여 BigQuery용 SQL 쿼리를 생성합니다.</p>
+                    </div>
+                </div>
+                <!-- Step 4 -->
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-4 text-green-600 font-bold">4</div>
+                    <div>
+                        <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2">BigQuery 쿼리 실행 (Database)</h3>
+                        <p class="text-gray-600 mb-3">생성된 SQL 쿼리를 Google Cloud BigQuery 서비스로 전달하여 실행하고 결과를 Python 객체로 반환받습니다.</p>
+                    </div>
+                </div>
+                <!-- Step 5 -->
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-4 text-green-600 font-bold">5</div>
+                    <div>
+                        <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2">결과 분석 및 시각화 생성 (Backend + Claude)</h3>
+                        <p class="text-gray-600 mb-3">조회된 데이터를 바탕으로 구조화된 분석 리포트를 생성하고 적절한 차트 설정을 제안합니다.</p>
+                    </div>
+                </div>
+                <!-- Step 6 -->
+                <div class="flex items-start">
+                    <div class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-4 text-green-600 font-bold">6</div>
+                    <div>
+                        <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2">최종 결과 표시 (Frontend)</h3>
+                        <p class="text-gray-600 mb-3">처리된 결과를 JSON 형태로 프론트엔드에 응답하고, JavaScript가 동적으로 HTML 요소를 생성하여 시각화합니다.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Tech Stack -->
+        <section class="page-section" id="section-5">
+            <div>
+                <div class="accent-bar"></div>
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">사용 기술 스택</h1>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mt-8">
+                <div class="bg-blue-50 p-6 rounded-lg"><div class="flex items-center mb-4"><i class="fas fa-desktop text-2xl text-blue-600 mr-3"></i><h3 class="text-xl font-semibold text-gray-800">Frontend</h3></div><ul class="space-y-3 text-gray-700"><li><strong>HTML5:</strong> 웹 페이지의 기본 구조</li><li><strong>Tailwind CSS:</strong> 반응형 UI 개발</li><li><strong>JavaScript (ES6+):</strong> 비동기 통신 처리</li><li><strong>Chart.js:</strong> 데이터 시각화 라이브러리</li></ul></div>
+                <div class="bg-red-50 p-6 rounded-lg"><div class="flex items-center mb-4"><i class="fas fa-server text-2xl text-red-600 mr-3"></i><h3 class="text-xl font-semibold text-gray-800">Backend</h3></div><ul class="space-y-3 text-gray-700"><li><strong>Python 3.11:</strong> 주력 개발 언어</li><li><strong>Flask:</strong> 경량 웹 프레임워크</li><li><strong>Gunicorn:</strong> WSGI HTTP 서버</li></ul></div>
+                <div class="bg-green-50 p-6 rounded-lg"><div class="flex items-center mb-4"><i class="fas fa-robot text-2xl text-green-600 mr-3"></i><h3 class="text-xl font-semibold text-gray-800">AI / ML</h3></div><ul class="space-y-3 text-gray-700"><li><strong>Anthropic Claude 3.5 Sonnet:</strong> 자연어-SQL 변환, 데이터 분석, 리포트 및 HTML 생성 등 핵심적인 AI 기능을 수행하는 대규모 언어 모델(LLM)</li></ul></div>
+                <div class="bg-yellow-50 p-6 rounded-lg"><div class="flex items-center mb-4"><i class="fas fa-cloud text-2xl text-yellow-600 mr-3"></i><h3 class="text-xl font-semibold text-gray-800">Database & Cloud</h3></div><ul class="space-y-3 text-gray-700"><li><strong>Google BigQuery:</strong> 서버리스 데이터 웨어하우스</li><li><strong>Google Cloud Run:</strong> 서버리스 플랫폼</li><li><strong>Google Secret Manager:</strong> 민감한 정보 안전 저장</li></ul></div>
+            </div>
+        </section>
+
+        <!-- Section 6: Summary -->
+        <section class="page-section" id="section-6">
+            <div>
+                <div class="accent-bar"></div>
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">요약 및 기대 효과</h1>
+            </div>
+            <div class="max-w-4xl mt-8">
+                <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-users text-xl"></i></div><div><h3 class="text-lg sm:text-xl font-semibold text-gray-800">비개발자도 데이터 분석 가능</h3><p class="text-gray-600 mt-1">NLQ to BigQuery 분석 서비스는 SQL 지식 없이도 자연어만으로 복잡한 데이터 분석을 수행할 수 있게 합니다.</p></div></div>
+                <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-cloud text-xl"></i></div><div><h3 class="text-lg sm:text-xl font-semibold text-gray-800">최신 AI와 클라우드 아키텍처</h3><p class="text-gray-600 mt-1">Claude 3.5와 Google Cloud 서비스를 결합하여 뛰어난 확장성과 활용성을 제공합니다.</p></div></div>
+                <div class="benefit-item"><div class="benefit-icon"><i class="fas fa-chart-line text-xl"></i></div><div><h3 class="text-lg sm:text-xl font-semibold text-gray-800">비즈니스 인사이트 자동화</h3><p class="text-gray-600 mt-1">데이터 분석과 시각화를 자동화하여 신속한 의사결정과 비즈니스 인텔리전스에 활용할 수 있습니다.</p></div></div>
+                <div class="qa-section">
+                    <div class="flex items-center mb-4"><i class="fas fa-question-circle text-2xl text-blue-600 mr-3"></i><h2 class="text-2xl font-bold text-gray-800">Q&A</h2></div>
+                    <p class="text-gray-700">자연어-SQL 변환 및 분석 서비스에 대한 질문이 있으시면 언제든지 문의해 주세요.</p>
+                    <div class="mt-4 flex items-center"><i class="fas fa-envelope text-blue-600 mr-2"></i><a href="mailto:contact@example.com" class="text-gray-600 hover:text-blue-600 transition-colors">contact@example.com</a></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+</body>
+</html>
