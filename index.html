@@ -32,20 +32,20 @@
     <div class="max-w-7xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden">
         <!-- 헤더 -->
         <div class="bg-gradient-to-r from-google-blue to-google-green text-white p-10 text-center">
-            <h1 class="text-4xl md:text-5xl font-light mb-3">📊 GA4 데이터 자연어 질의 & 분석</h1>
-            <p class="text-lg opacity-90">Google Analytics 4 이벤트 데이터를 자연어로 질문하고 3가지 방식으로 분석해보세요</p>
-            <div class="mt-4 text-sm opacity-75">
-                <kbd class="bg-white bg-opacity-20 px-2 py-1 rounded">Ctrl+Enter</kbd> 빠른 실행 | 
-                <kbd class="bg-white bg-opacity-20 px-2 py-1 rounded">Alt+1,2,3</kbd> 모드 선택
-            </div>
+            <h1 class="text-4xl md:text-5xl font-light mb-3">📊 Bigquery - GA4 데이터 자연어 질의 & 분석</h1>
+            <p class="text-lg opacity-90"> Bigquery 에 Google Analytics 4 샘플데이터가 적제되어 있습니다.</p>
         </div>
 
         <div class="p-10">
             <!-- 데이터 정보 -->
-            <div class="bg-blue-50 border-l-4 border-google-blue text-blue-800 p-4 rounded-lg mb-5">
+            <div class="bg-blue-50 text-blue-800 p-4">
                 📅 <strong>데이터 범위:</strong> 2020년 11월 21일 GA4 이벤트 데이터 | 
                 🏢 <strong>데이터 소스:</strong> nlq-ex.test_dataset.events_20201121
             </div>
+            <!-- 푸터 -->
+        <div class="py-6 text-sm text-gray-600">
+            <p>💡 <strong>팁:</strong> GA4 공개 데이터를 기반으로한 샘플 페이지 입니다. </p>
+        </div>
 
             <!-- 예시 질문들 -->
             <div class="bg-gray-50 border-l-4 border-google-blue p-5 rounded-xl mb-5">
@@ -56,7 +56,7 @@
                         <code class="text-blue-600 font-medium text-sm">"총 이벤트 수를 알려주세요"</code>
                     </div>
                     <div class="bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-google-blue transition-all duration-200 transform hover:-translate-y-0.5" onclick="setQuestion('가장 많이 발생한 이벤트 유형 상위 10개를 보여주세요')">
-                        <code class="text-blue-600 font-medium text-sm">"가장 많이 발생한 이벤트 유형 상위 10개를 보여주세요"</code>
+                        <code class="text-blue-600 font-medium text-sm">"가장 많이 발생한 이벤트 유형 상위 10개는?"</code>
                     </div>
                     <div class="bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-google-blue transition-all duration-200 transform hover:-translate-y-0.5" onclick="setQuestion('국가별 사용자 수를 보여주세요')">
                         <code class="text-blue-600 font-medium text-sm">"국가별 사용자 수를 보여주세요"</code>
@@ -79,7 +79,7 @@
                     <label for="questionInput" class="block mb-2 text-lg font-semibold text-gray-800">질문을 입력하세요</label>
                     <textarea 
                         id="questionInput" 
-                        placeholder="예: 한국 사용자들의 page_view 이벤트 수를 알려주세요"
+                        placeholder="예: 한국 사용자들의 page_view 이벤트 수를 알려주세요."
                         rows="4"
                         class="w-full p-5 border-2 border-gray-200 rounded-xl text-base resize-y min-h-[120px] transition-all duration-300 focus:outline-none focus:border-google-blue focus:ring-4 focus:ring-blue-100 placeholder-gray-400 italic"
                     ></textarea>
@@ -88,39 +88,21 @@
                 <div class="flex flex-wrap gap-4 items-start">
                     <button id="quickBtn" class="btn-gradient-green">
                         <span class="btn-main-text">⚡ 빠른 조회</span>
-                        <div class="btn-description">데이터만 빠르게</div>
+                        <div class="btn-description">데이터만 빠르게 표시</div>
                     </button>
                     <button id="structuredBtn" class="btn-gradient-blue">
-                        <span class="btn-main-text">📊 구조화 분석</span>
-                        <div class="btn-description">차트 + 리포트</div>
+                        <span class="btn-main-text">📊 구조화 분석 (응답시간이 걸립니다)</span>
+                        <div class="btn-description"> 미리 정의된 형식의 리포트 생성</div>
                     </button>
                     <button id="creativeBtn" class="btn-gradient-orange">
-                        <span class="btn-main-text">🎨 창의적 HTML</span>
-                        <div class="btn-description">독립 문서 생성</div>
+                        <span class="btn-main-text">🎨 LLM 분석 (응답시간이 걸립니다)</span>
+                        <div class="btn-description">LLM 자유롭게 분석 리포트 생성</div>
                     </button>
                     
                     <!-- 로딩 상태 -->
                     <div class="loading hidden" id="loading">
                         <div class="spinner"></div>
                         <span id="loadingText">데이터를 조회하고 있습니다...</span>
-                    </div>
-                </div>
-
-                <!-- 도움말 섹션 -->
-                <div class="mt-6 text-sm text-gray-600">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-green-50 p-3 rounded-lg border border-green-200">
-                            <h4 class="font-semibold text-green-800 mb-1">⚡ 빠른 조회</h4>
-                            <p class="text-green-700">SQL 생성 후 즉시 데이터 조회. 빠른 확인용으로 적합합니다.</p>
-                        </div>
-                        <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                            <h4 class="font-semibold text-blue-800 mb-1">📊 구조화 분석</h4>
-                            <p class="text-blue-700">AI 분석 리포트와 차트를 포함한 종합 분석. 가장 추천하는 모드입니다.</p>
-                        </div>
-                        <div class="bg-orange-50 p-3 rounded-lg border border-orange-200">
-                            <h4 class="font-semibold text-orange-800 mb-1">🎨 창의적 HTML</h4>
-                            <p class="text-orange-700">독립적인 HTML 리포트 문서 생성. 공유나 저장용으로 적합합니다.</p>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -131,20 +113,9 @@
                 <div class="text-center text-gray-500 py-10">
                     <div class="text-6xl mb-4">📊</div>
                     <h3 class="text-xl font-medium mb-2">분석 결과가 여기에 표시됩니다</h3>
-                    <p>위에서 질문을 입력하고 원하는 분석 모드를 선택하세요.</p>
+                    <p>위에서 질문을 입력하고 원하는 분석 모드를 클릭하세요.</p>
                 </div>
             </div>
-        </div>
-
-        <!-- 푸터 -->
-        <div class="bg-gray-50 text-center py-6 text-sm text-gray-600 border-t">
-            <p>💡 <strong>팁:</strong> 구체적이고 명확한 질문일수록 더 정확한 결과를 얻을 수 있습니다.</p>
-            <p class="mt-2">
-                <span class="inline-block mx-2">🔍 데이터 탐색</span>
-                <span class="inline-block mx-2">📈 트렌드 분석</span>
-                <span class="inline-block mx-2">🎯 성과 측정</span>
-                <span class="inline-block mx-2">📋 리포트 생성</span>
-            </p>
         </div>
     </div>
 
