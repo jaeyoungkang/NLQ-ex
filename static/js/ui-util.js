@@ -54,6 +54,18 @@ function formatCellValue(value) {
     return escapeHtml(stringValue);
 }
 
+// HTML 이스케이프
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// sleep 함수
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // 마크다운 파싱 (간단 버전)
 function parseMarkdown(text) {
     if (!text) return '';
