@@ -12,10 +12,11 @@
             theme: {
                 extend: {
                     colors: {
-                        'google-blue': '#4285f4',
-                        'google-green': '#34a853',
-                        'google-yellow': '#fbbc05',
-                        'google-red': '#ea4335'
+                        'claude-bg': '#f7f7f8',
+                        'claude-border': '#e5e5e6',
+                        'claude-text': '#2f2f2f',
+                        'claude-secondary': '#666666',
+                        'claude-accent': '#d97706'
                     }
                 }
             }
@@ -27,115 +28,283 @@
     
     <!-- 커스텀 CSS -->
     <link rel="stylesheet" href="/static/css/custom.css">
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #ffffff;
+        }
+        
+        .claude-container {
+            max-width: 768px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .claude-header {
+            background: white;
+            border-bottom: 1px solid #e5e5e6;
+            padding: 1rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .claude-messages {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            overflow-y: auto;
+        }
+        
+        .claude-input-area {
+            border-top: 1px solid #e5e5e6;
+            padding: 1rem 1.5rem;
+            background: white;
+            position: sticky;
+            bottom: 0;
+        }
+        
+        .message {
+            margin-bottom: 1.5rem;
+        }
+        
+        .message-content {
+            max-width: none;
+            line-height: 1.6;
+            color: #2f2f2f;
+        }
+        
+        .user-message {
+            background: #f7f7f8;
+            border: 1px solid #e5e5e6;
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            margin-left: 2rem;
+        }
+        
+        .assistant-message {
+            background: transparent;
+            padding: 0;
+        }
+        
+        .input-wrapper {
+            position: relative;
+            border: 1px solid #d1d5db;
+            border-radius: 0.75rem;
+            background: white;
+            transition: border-color 0.2s;
+        }
+        
+        .input-wrapper:focus-within {
+            border-color: #d97706;
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+        }
+        
+        .input-textarea {
+            width: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            padding: 1rem 3rem 1rem 1rem;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            max-height: 200px;
+            min-height: 50px;
+        }
+        
+        .send-button {
+            position: absolute;
+            right: 0.75rem;
+            bottom: 0.75rem;
+            width: 2rem;
+            height: 2rem;
+            background: #d97706;
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        
+        .send-button:hover:not(:disabled) {
+            background: #b45309;
+        }
+        
+        .send-button:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            color: #666666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        .typing-dots {
+            display: inline-flex;
+            margin-left: 0.5rem;
+        }
+        
+        .typing-dots span {
+            height: 4px;
+            width: 4px;
+            background: #666666;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 1px;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { opacity: 0.3; }
+            40% { opacity: 1; }
+        }
+        
+        .analysis-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .analysis-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e5e5e6;
+            background: white;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            color: #2f2f2f;
+        }
+        
+        .analysis-btn:hover:not(:disabled) {
+            border-color: #d97706;
+            background: #fef3e2;
+        }
+        
+        .analysis-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .example-questions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .example-question {
+            padding: 0.75rem;
+            border: 1px solid #e5e5e6;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            font-size: 0.9rem;
+            color: #2f2f2f;
+        }
+        
+        .example-question:hover {
+            border-color: #d97706;
+            background: #fef3e2;
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-400 via-purple-400 to-purple-600 min-h-screen p-5">
-    <div class="max-w-7xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden">
+<body class="bg-white">
+    <div class="claude-container">
         <!-- 헤더 -->
-        <div class="bg-gradient-to-r from-google-blue to-google-green text-white p-10 text-center">
-            <h1 class="text-4xl md:text-5xl font-light mb-3">📊 Bigquery - GA4 데이터 자연어 질의 & 분석</h1>
-            <p class="text-lg opacity-90"> Bigquery 에 Google Analytics 4 샘플데이터가 적제되어 있습니다.</p>
+        <div class="claude-header">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-xl font-semibold text-claude-text">GA4 데이터 분석</h1>
+                    <p class="text-sm text-claude-secondary mt-1">BigQuery GA4 샘플 데이터 (2020.11.21)</p>
+                </div>
+                <div class="text-sm text-claude-secondary">
+                    📊 nlq-ex.test_dataset.events_20201121
+                </div>
+            </div>
         </div>
 
-        <div class="p-10">
-            <!-- 데이터 정보 -->
-            <div class="bg-blue-50 text-blue-800 p-4">
-                📅 <strong>데이터 범위:</strong> 2020년 11월 21일 GA4 이벤트 데이터 | 
-                🏢 <strong>데이터 소스:</strong> nlq-ex.test_dataset.events_20201121
-            </div>
-            
-            <!-- 푸터 -->
-            <div class="py-6 text-sm text-gray-600">
-                <p>💡 <strong>팁:</strong> GA4 공개 데이터를 기반으로한 샘플 페이지 입니다. </p>
-            </div>
-
-            <!-- 예시 질문들 -->
-            <div class="bg-gray-50 border-l-4 border-google-blue p-5 rounded-xl mb-5">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">💡 예시 질문들 (클릭하면 자동 입력됩니다)</h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <div class="bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-google-blue transition-all duration-200 transform hover:-translate-y-0.5" onclick="setQuestion('총 이벤트 수를 알려주세요')">
-                        <code class="text-blue-600 font-medium text-sm">"총 이벤트 수를 알려주세요"</code>
-                    </div>
-                    <div class="bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-google-blue transition-all duration-200 transform hover:-translate-y-0.5" onclick="setQuestion('가장 많이 발생한 이벤트 유형 상위 10개를 보여주세요')">
-                        <code class="text-blue-600 font-medium text-sm">"가장 많이 발생한 이벤트 유형 상위 10개는?"</code>
-                    </div>
-                    <div class="bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-google-blue transition-all duration-200 transform hover:-translate-y-0.5" onclick="setQuestion('국가별 사용자 수를 보여주세요')">
-                        <code class="text-blue-600 font-medium text-sm">"국가별 사용자 수를 보여주세요"</code>
-                    </div>
-                    <div class="bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-google-blue transition-all duration-200 transform hover:-translate-y-0.5" onclick="setQuestion('모바일과 데스크톱 사용자 비율을 보여주세요')">
-                        <code class="text-blue-600 font-medium text-sm">"모바일과 데스크톱 사용자 비율을 보여주세요"</code>
-                    </div>
-                    <div class="bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-google-blue transition-all duration-200 transform hover:-translate-y-0.5" onclick="setQuestion('시간대별 이벤트 수를 보여주세요')">
-                        <code class="text-blue-600 font-medium text-sm">"시간대별 이벤트 수를 보여주세요"</code>
-                    </div>
-                    <div class="bg-white p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-blue-50 hover:border-google-blue transition-all duration-200 transform hover:-translate-y-0.5" onclick="setQuestion('운영체제별 사용자 분포를 보여주세요')">
-                        <code class="text-blue-600 font-medium text-sm">"운영체제별 사용자 분포를 보여주세요"</code>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 대화 기록 섹션 (텍스트 입력창 위에 위치) -->
-            <div class="mt-10" id="conversationHistory">
-                <!-- 대화 내용이 여기에 쌓입니다 -->
-            </div>
-
-            <!-- 질문 입력 섹션 - 대화형 UI -->
-            <div class="mb-10">
-                <div class="mb-5">
-                    <label for="questionInput" class="block mb-2 text-lg font-semibold text-gray-800">질문을 입력하세요</label>
-                    <div class="relative">
-                        <textarea 
-                            id="questionInput" 
-                            placeholder="예: 한국 사용자들의 page_view 이벤트 수를 알려주세요."
-                            rows="3"
-                            class="w-full p-4 pr-16 border-2 border-gray-200 rounded-xl text-base resize-none transition-all duration-300 focus:outline-none focus:border-google-blue focus:ring-4 focus:ring-blue-100 placeholder-gray-400"
-                        ></textarea>
-                        <button 
-                            id="sendBtn" 
-                            class="absolute right-3 bottom-3 bg-google-blue hover:bg-blue-600 text-white p-2 rounded-lg transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                            title="전송 (Enter)"
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <div class="flex items-center justify-between mt-2 text-sm text-gray-500">
-                        <span>💡 Enter로 전송, Shift+Enter로 줄바꿈</span>
-                        <span id="charCount">0/500</span>
+        <!-- 대화 영역 -->
+        <div class="claude-messages" id="messagesContainer">
+            <!-- 초기 안내 메시지 -->
+            <div class="message">
+                <div class="assistant-message">
+                    <div class="message-content">
+                        <div class="flex items-start">
+                            <div class="w-6 h-6 rounded-full bg-claude-accent text-white text-xs flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">AI</div>
+                            <div class="flex-1">
+                                <p class="mb-4">안녕하세요! GA4 데이터 분석 도우미입니다. 자연어로 질문하시면 BigQuery에서 데이터를 조회하고 분석해드립니다.</p>
+                                
+                                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                    <h3 class="font-medium text-claude-text mb-3">💡 예시 질문들</h3>
+                                    <div class="example-questions">
+                                        <div class="example-question" onclick="setQuestion('총 이벤트 수를 알려주세요')">
+                                            "총 이벤트 수를 알려주세요"
+                                        </div>
+                                        <div class="example-question" onclick="setQuestion('가장 많이 발생한 이벤트 유형 상위 10개를 보여주세요')">
+                                            "가장 많이 발생한 이벤트 유형 상위 10개는?"
+                                        </div>
+                                        <div class="example-question" onclick="setQuestion('국가별 사용자 수를 보여주세요')">
+                                            "국가별 사용자 수를 보여주세요"
+                                        </div>
+                                        <div class="example-question" onclick="setQuestion('모바일과 데스크톱 사용자 비율을 보여주세요')">
+                                            "모바일과 데스크톱 사용자 비율을 보여주세요"
+                                        </div>
+                                        <div class="example-question" onclick="setQuestion('시간대별 이벤트 수를 보여주세요')">
+                                            "시간대별 이벤트 수를 보여주세요"
+                                        </div>
+                                        <div class="example-question" onclick="setQuestion('운영체제별 사용자 분포를 보여주세요')">
+                                            "운영체제별 사용자 분포를 보여주세요"
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- 처리 과정 모니터링 -->
-            <div class="process-monitor" id="processMonitor">
-                <h4 class="text-lg font-semibold text-gray-800 mb-4">🔍 처리 과정</h4>
-                <div class="space-y-2" id="processSteps">
-                    <!-- 처리 단계들이 여기에 동적으로 추가됩니다 -->
-                </div>
+        <!-- 입력 영역 -->
+        <div class="claude-input-area">
+            <div class="input-wrapper">
+                <textarea 
+                    id="messageInput" 
+                    class="input-textarea"
+                    placeholder="GA4 데이터에 대해 질문해보세요..."
+                    rows="1"
+                ></textarea>
+                <button id="sendButton" class="send-button" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                        <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
             </div>
-
-            <!-- 기존 결과 섹션 제거 - 이제 conversationHistory에 쌓임 -->
+            <div class="flex items-center justify-between mt-2 text-xs text-claude-secondary">
+                <span>Enter로 전송, Shift+Enter로 줄바꿈</span>
+                <span id="charCounter">0/2000</span>
+            </div>
         </div>
     </div>
 
     <!-- JavaScript 파일들 -->
     <script src="/static/js/analysis.js"></script>
     <script src="/static/js/main.js"></script>
-
-    <!-- 간단한 서비스 워커 등록 (선택사항) -->
-    <script>
-        // 오프라인 지원을 위한 기본 서비스 워커
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js').then(function(registration) {
-                    console.log('SW registered: ', registration);
-                }).catch(function(registrationError) {
-                    console.log('SW registration failed: ', registrationError);
-                });
-            });
-        }
-    </script>
 </body>
 </html>
