@@ -79,48 +79,31 @@
                 <!-- 대화 내용이 여기에 쌓입니다 -->
             </div>
 
-            <!-- 질문 입력 섹션 -->
+            <!-- 질문 입력 섹션 - 대화형 UI -->
             <div class="mb-10">
                 <div class="mb-5">
                     <label for="questionInput" class="block mb-2 text-lg font-semibold text-gray-800">질문을 입력하세요</label>
-                    <textarea 
-                        id="questionInput" 
-                        placeholder="예: 한국 사용자들의 page_view 이벤트 수를 알려주세요."
-                        rows="4"
-                        class="w-full p-5 border-2 border-gray-200 rounded-xl text-base resize-y min-h-[120px] transition-all duration-300 focus:outline-none focus:border-google-blue focus:ring-4 focus:ring-blue-100 placeholder-gray-400 italic"
-                    ></textarea>
-                </div>
-
-                <!-- 1단계: 빠른 조회만 활성화 -->
-                <div class="flex flex-wrap gap-4 items-start" id="initialButtons">
-                    <button id="quickBtn" class="btn-gradient-green">
-                        <span class="btn-main-text">📊 조회</span>
-                        <div class="btn-description">데이터를 먼저 확인해보세요</div>
-                    </button>
-                    <div class="text-gray-500 text-sm flex items-center">
-                        💡 먼저 빠른 조회로 데이터를 확인한 후 고급 분석을 이용할 수 있습니다.
-                    </div>
-                    
-                    <!-- 로딩 상태 -->
-                    <div class="loading hidden" id="loading">
-                        <div class="spinner"></div>
-                        <span id="loadingText">데이터를 조회하고 있습니다...</span>
-                    </div>
-                </div>
-
-                <!-- 2단계: 고급 분석 옵션 (빠른 조회 후 표시) -->
-                <div class="analysis-options" id="analysisOptions">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-3">🎯 고급 분석 옵션</h4>
-                    <p class="text-sm text-gray-600 mb-4">데이터가 확인되었습니다. 이제 더 자세한 분석을 수행할 수 있습니다.</p>
-                    <div class="flex flex-wrap gap-4">
-                        <button id="structuredBtn" class="btn-gradient-blue" disabled>
-                            <span class="btn-main-text">📊 구조화 분석 (응답시간이 걸립니다)</span>
-                            <div class="btn-description"> 미리 정의된 형식의 리포트 생성</div>
+                    <div class="relative">
+                        <textarea 
+                            id="questionInput" 
+                            placeholder="예: 한국 사용자들의 page_view 이벤트 수를 알려주세요."
+                            rows="3"
+                            class="w-full p-4 pr-16 border-2 border-gray-200 rounded-xl text-base resize-none transition-all duration-300 focus:outline-none focus:border-google-blue focus:ring-4 focus:ring-blue-100 placeholder-gray-400"
+                        ></textarea>
+                        <button 
+                            id="sendBtn" 
+                            class="absolute right-3 bottom-3 bg-google-blue hover:bg-blue-600 text-white p-2 rounded-lg transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            title="전송 (Enter)"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
                         </button>
-                        <button id="creativeBtn" class="btn-gradient-orange" disabled>
-                            <span class="btn-main-text">🎨 LLM 분석 (응답시간이 걸립니다)</span>
-                            <div class="btn-description">LLM 자유롭게 분석 리포트 생성</div>
-                        </button>
+                    </div>
+                    <div class="flex items-center justify-between mt-2 text-sm text-gray-500">
+                        <span>💡 Enter로 전송, Shift+Enter로 줄바꿈</span>
+                        <span id="charCount">0/500</span>
                     </div>
                 </div>
             </div>

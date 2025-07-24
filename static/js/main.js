@@ -3,105 +3,385 @@
 
 // 전역 변수
 const questionInput = document.getElementById('questionInput');
-const quickBtn = document.getElementById('quickBtn');
-const structuredBtn = document.getElementById('structuredBtn');
-const creativeBtn = document.getElementById('creativeBtn');
-const processMonitor = document.getElementById('processMonitor');
-const processSteps = document.getElementById('processSteps');
-const conversationHistory = document.getElementById('conversationHistory'); // 변경: resultsSection → conversationHistory
-const analysisOptions = document.getElementById('analysisOptions');
+const sendBtn = document.getElementById('sendBtn');
+const charCount = document.getElementById('charCount');
+const conversationHistory = document.getElementById('conversationHistory');
 
 let currentStepId = 0;
 let lastQuickQueryData = null;
+let isProcessing = false;
 
 // 예시 질문 설정 함수
 function setQuestion(question) {
     questionInput.value = question;
     questionInput.focus();
-    
-    // 고급 분석 옵션 숨기기 (새로운 질문이므로)
-    if (analysisOptions) {
-        analysisOptions.classList.remove('show');
-        structuredBtn.disabled = true;
-        creativeBtn.disabled = true;
-    }
-    
-    // 이전 처리 과정 숨기기
-    if (processMonitor) {
-        processMonitor.style.display = 'none';
+    updateCharCount();
+}
+
+// 문자 수 카운트 업데이트
+function updateCharCount() {
+    const count = questionInput.value.length;
+    charCount.textContent = `${count}/500`;
+    if (count > 500) {
+        charCount.style.color = '#ef4444';
+    } else {
+        charCount.style.color = '#6b7280';
     }
 }
 
-// Enter 키로 질문 전송 (Ctrl+Enter)
+// Enter 키 처리 (Shift+Enter는 줄바꿈, Enter는 전송)
 questionInput.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.key === 'Enter') {
-        if (!quickBtn.disabled) {
-            executeQuery('quick');
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!isProcessing && this.value.trim()) {
+            sendMessage();
         }
     }
 });
 
-// 버튼 이벤트들
-quickBtn.addEventListener('click', () => executeQuery('quick'));
-structuredBtn.addEventListener('click', () => executeQuery('structured'));
-creativeBtn.addEventListener('click', () => executeQuery('creative'));
+// 입력 시 문자 수 업데이트
+questionInput.addEventListener('input', updateCharCount);
 
-// 처리 단계 추가 함수
-function addProcessStep(title, description) {
-    currentStepId++;
-    const stepElement = document.createElement('div');
-    stepElement.className = 'process-step';
-    stepElement.id = `step-${currentStepId}`;
+// 전송 버튼 클릭
+sendBtn.addEventListener('click', () => {
+    if (!isProcessing && questionInput.value.trim()) {
+        sendMessage();
+    }
+});
+
+// 메시지 전송 함수
+async function sendMessage() {
+    const question = questionInput.value.trim();
     
-    stepElement.innerHTML = `
-        <div class="step-icon pending" id="icon-${currentStepId}">
-            ${currentStepId}
+    if (!question || question.length > 500) {
+        return;
+    }
+    
+    isProcessing = true;
+    updateUIState(true);
+    
+    // 1. 사용자 메시지 표시
+    showUserMessage(question);
+    
+    // 2. 입력창 초기화
+    questionInput.value = '';
+    updateCharCount();
+    
+    try {
+        // 3. LLM에게 분석 유형 판단 요청
+        const analysisDecision = await requestAnalysisDecision(question);
+        
+        if (analysisDecision.needsAnalysis) {
+            // 4. 분석이 필요한 경우 - 사용자에게 분석 옵션 제시
+            await showAnalysisOptions(question, analysisDecision.analysisTypes);
+        } else {
+            // 5. 단순 조회만 필요한 경우 - 바로 실행
+            await executeSimpleQuery(question);
+        }
+        
+    } catch (error) {
+        showErrorMessage(`처리 중 오류가 발생했습니다: ${error.message}`);
+    } finally {
+        isProcessing = false;
+        updateUIState(false);
+    }
+}
+
+// UI 상태 업데이트
+function updateUIState(processing) {
+    sendBtn.disabled = processing;
+    questionInput.disabled = processing;
+    
+    if (processing) {
+        sendBtn.innerHTML = `
+            <div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
+        `;
+    } else {
+        sendBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
+    }
+}
+
+// 사용자 메시지 표시
+function showUserMessage(message) {
+    const userMessageHtml = `
+        <div class="flex justify-end mb-4">
+            <div class="bg-google-blue text-white p-4 rounded-lg max-w-[80%] break-words">
+                <div class="font-medium mb-1">👤 사용자</div>
+                <div>${escapeHtml(message)}</div>
+            </div>
         </div>
-        <div class="step-content">
-            <div class="step-title">${title}</div>
-            <div class="step-description">${description}</div>
+    `;
+    conversationHistory.insertAdjacentHTML('beforeend', userMessageHtml);
+    scrollToBottom();
+}
+
+// AI 응답 표시 (스트리밍 스타일)
+function showAIMessage(message, type = 'assistant') {
+    const iconMap = {
+        'assistant': '🤖',
+        'system': '⚙️',
+        'analysis': '📊'
+    };
+    
+    const bgColorMap = {
+        'assistant': 'bg-gray-100',
+        'system': 'bg-blue-50',
+        'analysis': 'bg-green-50'
+    };
+    
+    const messageId = `ai-message-${Date.now()}`;
+    const aiMessageHtml = `
+        <div class="flex justify-start mb-4">
+            <div class="${bgColorMap[type]} p-4 rounded-lg max-w-[80%] break-words" id="${messageId}">
+                <div class="font-medium mb-2">${iconMap[type]} AI 어시스턴트</div>
+                <div class="ai-content">${message}</div>
+            </div>
         </div>
-        <div class="step-time" id="time-${currentStepId}">
-            준비 중...
+    `;
+    conversationHistory.insertAdjacentHTML('beforeend', aiMessageHtml);
+    scrollToBottom();
+    return messageId;
+}
+
+// 페이지 하단으로 스크롤
+function scrollToBottom() {
+    setTimeout(() => {
+        conversationHistory.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'end' 
+        });
+    }, 100);
+}
+
+// LLM에게 분석 유형 판단 요청
+async function requestAnalysisDecision(question) {
+    showAIMessage("질문을 분석하고 있습니다...", 'system');
+    
+    // 실제로는 백엔드 API 호출
+    // 임시로 간단한 키워드 기반 판단 로직
+    const analysisKeywords = ['분석', '비교', '트렌드', '패턴', '인사이트', '리포트', '차트', '시각화'];
+    const needsAnalysis = analysisKeywords.some(keyword => question.includes(keyword));
+    
+    await sleep(1000); // 실제 API 호출 시뮬레이션
+    
+    if (needsAnalysis) {
+        return {
+            needsAnalysis: true,
+            analysisTypes: ['구조화 분석', '창의적 HTML 리포트']
+        };
+    } else {
+        return {
+            needsAnalysis: false
+        };
+    }
+}
+
+// 분석 옵션 제시
+async function showAnalysisOptions(question, analysisTypes) {
+    const optionsHtml = `
+        질문을 분석한 결과, 더 깊이 있는 분석이 도움이 될 것 같습니다.<br><br>
+        어떤 방식으로 분석을 진행할까요?<br><br>
+        <div class="flex flex-wrap gap-2 mt-3">
+            <button onclick="executeAnalysis('${escapeHtml(question)}', 'quick')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                📊 기본 조회만
+            </button>
+            <button onclick="executeAnalysis('${escapeHtml(question)}', 'structured')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                📈 구조화 분석
+            </button>
+            <button onclick="executeAnalysis('${escapeHtml(question)}', 'creative')" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                🎨 창의적 HTML 리포트
+            </button>
         </div>
     `;
     
-    processSteps.appendChild(stepElement);
-    return currentStepId;
+    showAIMessage(optionsHtml, 'analysis');
 }
 
-// 처리 단계 상태 업데이트
-function updateProcessStep(stepId, status, time = null, description = null) {
-    const icon = document.getElementById(`icon-${stepId}`);
-    const timeElement = document.getElementById(`time-${stepId}`);
-    const step = document.getElementById(`step-${stepId}`);
+// 분석 실행 (전역 함수로 만들어 onclick에서 호출 가능)
+window.executeAnalysis = async function(question, analysisType) {
+    // 선택 버튼들 비활성화
+    const buttons = document.querySelectorAll('#conversationHistory button');
+    buttons.forEach(btn => btn.disabled = true);
     
-    if (icon) {
-        icon.className = `step-icon ${status}`;
-        if (status === 'completed') {
-            icon.innerHTML = '✓';
-        } else if (status === 'error') {
-            icon.innerHTML = '✗';
-        } else if (status === 'processing') {
-            icon.innerHTML = '⏳';
-        }
-    }
+    isProcessing = true;
+    updateUIState(true);
     
-    if (timeElement) {
-        if (time) {
-            timeElement.textContent = time;
-        } else if (status === 'processing') {
-            timeElement.textContent = '처리 중...';
+    try {
+        if (analysisType === 'quick') {
+            await executeSimpleQuery(question);
+        } else if (analysisType === 'structured') {
+            await executeStructuredAnalysis(question);
+        } else if (analysisType === 'creative') {
+            await executeCreativeAnalysis(question);
         }
+    } catch (error) {
+        showErrorMessage(`분석 중 오류가 발생했습니다: ${error.message}`);
+    } finally {
+        isProcessing = false;
+        updateUIState(false);
     }
+};
+
+// 단순 조회 실행
+async function executeSimpleQuery(question) {
+    const messageId = showAIMessage("쿼리를 생성하고 있습니다...", 'system');
     
-    // 설명 업데이트
-    if (description && step) {
-        const descElement = step.querySelector('.step-description');
-        if (descElement) {
-            descElement.textContent = description;
+    try {
+        // SQL 생성
+        const response = await fetch('/quick', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: question })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // 쿼리 생성 완료 메시지 업데이트
+            document.querySelector(`#${messageId} .ai-content`).innerHTML = `
+                ✅ SQL 쿼리가 생성되었습니다:<br><br>
+                <code class="block bg-gray-200 p-3 rounded text-sm font-mono whitespace-pre-wrap overflow-x-auto">${escapeHtml(data.generated_sql)}</code>
+            `;
+            
+            // 데이터 조회 중 메시지
+            const queryingId = showAIMessage("데이터를 조회하고 있습니다...", 'system');
+            
+            await sleep(500);
+            
+            // 결과 표시
+            document.querySelector(`#${queryingId} .ai-content`).innerHTML = `
+                ✅ 조회가 완료되었습니다. (총 ${data.row_count}개 결과)<br><br>
+                <div class="table-container">${createTable(data.data)}</div>
+            `;
+            
+        } else {
+            document.querySelector(`#${messageId} .ai-content`).textContent = 
+                `❌ 오류: ${data.error || '쿼리 생성에 실패했습니다.'}`;
         }
+        
+    } catch (error) {
+        document.querySelector(`#${messageId} .ai-content`).textContent = 
+            `❌ 네트워크 오류: ${error.message}`;
     }
+}
+
+// 구조화 분석 실행
+async function executeStructuredAnalysis(question) {
+    const messageId = showAIMessage("구조화 분석을 수행하고 있습니다...", 'analysis');
+    
+    try {
+        const response = await fetch('/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: question })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            document.querySelector(`#${messageId} .ai-content`).innerHTML = `
+                ✅ 구조화 분석이 완료되었습니다.<br><br>
+                <div class="bg-green-50 p-4 rounded-lg mb-4">
+                    <h4 class="font-semibold mb-2">📊 AI 분석 리포트</h4>
+                    <div>${parseMarkdown(data.analysis_report)}</div>
+                </div>
+                <div class="table-container">${createTable(data.data)}</div>
+            `;
+        } else {
+            document.querySelector(`#${messageId} .ai-content`).textContent = 
+                `❌ 분석 오류: ${data.error || '구조화 분석에 실패했습니다.'}`;
+        }
+        
+    } catch (error) {
+        document.querySelector(`#${messageId} .ai-content`).textContent = 
+            `❌ 네트워크 오류: ${error.message}`;
+    }
+}
+
+// 창의적 HTML 분석 실행
+async function executeCreativeAnalysis(question) {
+    const messageId = showAIMessage("창의적 HTML 리포트를 생성하고 있습니다...", 'analysis');
+    
+    try {
+        const response = await fetch('/creative-html', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: question })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            document.querySelector(`#${messageId} .ai-content`).innerHTML = `
+                ✅ 창의적 HTML 리포트가 생성되었습니다.<br><br>
+                <div class="flex gap-2 mb-4">
+                    <button onclick="openHtmlInNewWindow()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">🔗 새 창에서 열기</button>
+                    <button onclick="downloadHtmlReport()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">💾 다운로드</button>
+                </div>
+                <iframe 
+                    style="width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 8px;"
+                    sandbox="allow-scripts allow-same-origin">
+                </iframe>
+            `;
+            
+            // iframe에 HTML 로드
+            const iframe = document.querySelector(`#${messageId} iframe`);
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(data.html_content);
+            doc.close();
+            
+            // 전역 변수에 저장
+            window.currentHtmlReport = data.html_content;
+            window.currentQuestion = question;
+            
+        } else {
+            document.querySelector(`#${messageId} .ai-content`).textContent = 
+                `❌ 생성 오류: ${data.error || 'HTML 리포트 생성에 실패했습니다.'}`;
+        }
+        
+    } catch (error) {
+        document.querySelector(`#${messageId} .ai-content`).textContent = 
+            `❌ 네트워크 오류: ${error.message}`;
+    }
+}
+
+// HTML 리포트 관련 함수들
+window.openHtmlInNewWindow = function() {
+    if (window.currentHtmlReport) {
+        const newWindow = window.open('', '_blank', 'width=1200,height=800,scrollbars=yes');
+        newWindow.document.write(window.currentHtmlReport);
+        newWindow.document.close();
+    }
+};
+
+window.downloadHtmlReport = function() {
+    if (window.currentHtmlReport) {
+        const blob = new Blob([window.currentHtmlReport], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ga4-analysis-${window.currentQuestion?.replace(/[^a-zA-Z0-9]/g, '-') || 'report'}-${new Date().toISOString().slice(0,10)}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+};
+
+// 오류 메시지 표시
+function showErrorMessage(message) {
+    showAIMessage(`❌ ${message}`, 'system');
+}
+
+// sleep 함수
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // 질문 실행 함수
