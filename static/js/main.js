@@ -317,48 +317,15 @@ function showDataQueryStatus(message) {
 
 // 빠른 조회 결과 표시 (수정된 버전)
 function displayQuickResults(data) {
-    // 기존 상태 메시지들은 유지하고, 결과만 추가
+    // "데이터 조회 중" 상태 메시지 제거
+    const dataQueryStatus = document.getElementById('dataQueryStatus');
+    if (dataQueryStatus) {
+        dataQueryStatus.remove();
+    }
+
+    // 간단한 테이블 결과만 표시
     const resultHtml = `
         <div id="queryResults" class="mt-4">
-            <div class="results-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 2px solid #e5e7eb;">
-                <h2 style="font-size: 1.5rem; font-weight: 600; color: #374151; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
-                    📊 조회 결과 
-                    <span style="background: #10b981; color: white; padding: 0.25rem 0.5rem; border-radius: 0.75rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-left: 0.75rem;">완료</span>
-                </h2>
-                <div style="color: #6b7280; font-size: 0.875rem; font-weight: 500;">${data.row_count}개 결과</div>
-            </div>
-
-            <!-- 조회 결과 요약 -->
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                <h3 class="font-semibold text-green-800 mb-2">📊 조회 결과 요약</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                    <div class="bg-white p-3 rounded border">
-                        <div class="text-2xl font-bold text-gray-800">${data.row_count}</div>
-                        <div class="text-sm text-gray-600">총 레코드 수</div>
-                    </div>
-                    <div class="bg-white p-3 rounded border">
-                        <div class="text-2xl font-bold text-gray-800">${data.data && data.data.length > 0 ? Object.keys(data.data[0]).length : 0}</div>
-                        <div class="text-sm text-gray-600">컬럼 수</div>
-                    </div>
-                    <div class="bg-white p-3 rounded border">
-                        <div class="text-2xl font-bold text-green-600">성공</div>
-                        <div class="text-sm text-gray-600">조회 상태</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 원본 데이터 표시 -->
-            <div style="background: #f0f9ff; padding: 1.25rem; border-radius: 0.75rem; margin-bottom: 1.25rem; border-left: 4px solid #3b82f6;">
-                <h3 style="margin-bottom: 1rem; color: #374151; font-size: 1.125rem; font-weight: 600;">📝 쿼리 정보</h3>
-                <div style="margin-bottom: 1rem; color: #374151;">
-                    <strong style="color: #1e40af;">원본 질문:</strong> ${escapeHtml(data.original_question)}
-                </div>
-                <div style="font-family: ui-monospace, monospace; background: white; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; white-space: pre-wrap; overflow-x: auto;">
-                    <strong style="color: #1e40af;">생성된 SQL:</strong><br>
-                    <code>${escapeHtml(data.generated_sql)}</code>
-                </div>
-            </div>
-
             <div class="table-container">
                 ${createTable(data.data)}
             </div>
@@ -378,7 +345,7 @@ function displayQuickResults(data) {
         </div>
     `;
 
-    // 기존 내용에 결과를 추가 (대체하지 않음)
+    // 기존 내용에 결과를 추가
     resultsSection.insertAdjacentHTML('beforeend', resultHtml);
     
     // 결과 섹션으로 부드러운 스크롤
