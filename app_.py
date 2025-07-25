@@ -1,6 +1,4 @@
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-
 from google.cloud import bigquery
 import anthropic
 import os
@@ -24,7 +22,6 @@ from utils.data_utils import (
 from utils.html_utils import validate_claude_html, generate_fallback_html
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000"])  # 프론트엔드 URL 허용
 
 @app.route('/')
 def index():
