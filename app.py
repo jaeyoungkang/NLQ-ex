@@ -26,16 +26,6 @@ from utils.html_utils import validate_claude_html, generate_fallback_html
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:3000"])  # 프론트엔드 URL 허용
 
-# 단순한 메모리 기반 저장소 - 최신 조회 결과 1개만 보관
-latest_query_results = {
-    "data": None,
-    "question": None,
-    "sql_query": None,
-    "timestamp": None,
-    "mode": None,
-    "row_count": 0
-}
-
 @app.route('/')
 def index():
     """메인 페이지"""
@@ -68,21 +58,6 @@ try:
 except Exception as e:
     print(f"BigQuery 클라이언트 초기화 실패: {e}")
     bigquery_client = None
-
-def save_query_result(question, sql_query, data, mode):
-    """조회 결과를 메모리에 저장"""
-    global latest_query_results
-    
-    latest_query_results = {
-        "data": data,
-        "question": question,
-        "sql_query": sql_query,
-        "timestamp": datetime.now().isoformat(),
-        "mode": mode,
-        "row_count": len(data) if data else 0
-    }
-    
-    print(f"조회 결과 저장됨: {question[:50]}... ({len(data) if data else 0}개 행)")
 
 def natural_language_to_sql(question):
     """자연어 질문을 BigQuery SQL로 변환"""
@@ -320,62 +295,6 @@ def generate_html_analysis_report(question, sql_query, query_results):
             "fallback": True
         }
 
-def generate_previous_data_analysis(new_question, previous_data, previous_question):
-    """이전 조회 결과와 새 질문을 결합하여 분석"""
-    if not anthropic_client:
-        raise Exception("Anthropic 클라이언트가 초기화되지 않았습니다.")
-    
-    # 이전 데이터 요약
-    data_summary = f"이전 조회 결과 ({len(previous_data)}개 행)"
-    if previous_data:
-        columns = list(previous_data[0].keys()) if isinstance(previous_data[0], dict) else []
-        data_summary += f", 컬럼: {', '.join(columns)}"
-    
-    analysis_prompt = f"""다음은 이전에 조회한 GA4 데이터와 새로운 질문입니다. 이전 데이터를 분석하여 새 질문에 답변해주세요.
-
-**이전 질문:** {previous_question}
-
-**이전 조회 데이터 ({len(previous_data)}개 행):**
-{json.dumps(previous_data[:20], indent=2, ensure_ascii=False, default=str)}
-
-**새로운 질문:** {new_question}
-
-**요청사항:**
-1. 이전 데이터를 기반으로 새 질문에 답변하세요.
-2. 구체적인 수치와 인사이트를 포함하세요.
-3. 추가 SQL 쿼리가 필요한 경우 제안하세요.
-4. 비즈니스 관점의 실용적인 분석을 제공하세요.
-
-**분석 형식:**
-## 📊 이전 데이터 기반 분석
-
-### 🎯 질문에 대한 답변
-(새 질문에 대한 직접적인 답변)
-
-### 📈 핵심 발견사항
-(이전 데이터에서 찾은 주요 인사이트)
-
-### 💡 추천 액션
-(다음 단계 제안)
-
-### 🔍 추가 분석 제안
-(더 깊은 분석을 위한 제안)
-"""
-
-    try:
-        response = anthropic_client.messages.create(
-            model="claude-3-5-sonnet-20241022",
-            max_tokens=2500,
-            messages=[
-                {"role": "user", "content": analysis_prompt}
-            ]
-        )
-        
-        return response.content[0].text.strip()
-        
-    except Exception as e:
-        raise Exception(f"이전 데이터 분석 중 오류 발생: {str(e)}")
-
 # API 엔드포인트들
 
 @app.route('/quick', methods=['POST'])
@@ -412,17 +331,13 @@ def quick_query():
                 "generated_sql": sql_query
             }), 500
         
-        # 조회 결과 저장
-        save_query_result(question, sql_query, query_result["data"], "quick")
-        
         return jsonify({
             "success": True,
             "mode": "quick",
             "original_question": question,
             "generated_sql": sql_query,
             "data": query_result["data"],
-            "row_count": query_result.get("row_count", 0),
-            "has_previous_data": latest_query_results["data"] is not None
+            "row_count": query_result.get("row_count", 0)
         })
         
     except Exception as e:
@@ -474,9 +389,6 @@ def structured_analysis():
             query_result["data"]
         )
         
-        # 조회 결과 저장
-        save_query_result(question, sql_query, query_result["data"], "structured")
-        
         return jsonify({
             "success": True,
             "mode": "structured",
@@ -486,8 +398,7 @@ def structured_analysis():
             "row_count": query_result.get("row_count", 0),
             "analysis_report": analysis_result["report"],
             "chart_config": analysis_result["chart_config"],
-            "data_summary": analysis_result["data_summary"],
-            "has_previous_data": latest_query_results["data"] is not None
+            "data_summary": analysis_result["data_summary"]
         })
         
     except Exception as e:
@@ -564,9 +475,6 @@ def creative_html_analysis():
                 "fallback": True
             }
         
-        # 조회 결과 저장
-        save_query_result(question, sql_query, data, "creative_html")
-        
         return jsonify({
             "success": True,
             "mode": "creative_html",
@@ -576,8 +484,7 @@ def creative_html_analysis():
             "html_content": html_result["html_content"],
             "quality_score": html_result["quality_score"],
             "attempts": html_result["attempts"],
-            "is_fallback": html_result.get("fallback", False),
-            "has_previous_data": latest_query_results["data"] is not None
+            "is_fallback": html_result.get("fallback", False)
         })
         
     except Exception as e:
@@ -587,82 +494,6 @@ def creative_html_analysis():
             "error": f"서버 오류: {str(e)}",
             "mode": "creative_html"
         }), 500
-
-@app.route('/analyze-previous', methods=['POST'])
-def analyze_previous_data():
-    """이전 조회 결과를 활용한 추가 분석"""
-    try:
-        # 요청 검증
-        if not request.json or 'question' not in request.json:
-            return jsonify({
-                "success": False,
-                "error": "요청 본문에 'question' 필드가 필요합니다.",
-                "mode": "analyze_previous"
-            }), 400
-
-        new_question = request.json['question'].strip()
-        
-        if not new_question:
-            return jsonify({
-                "success": False,
-                "error": "질문이 비어있습니다.",
-                "mode": "analyze_previous"
-            }), 400
-        
-        # 이전 데이터 확인
-        if not latest_query_results["data"]:
-            return jsonify({
-                "success": False,
-                "error": "이전 조회 결과가 없습니다. 먼저 데이터를 조회해주세요.",
-                "mode": "analyze_previous"
-            }), 400
-        
-        # 이전 데이터를 활용한 분석 수행
-        analysis_result = generate_previous_data_analysis(
-            new_question,
-            latest_query_results["data"],
-            latest_query_results["question"]
-        )
-        
-        return jsonify({
-            "success": True,
-            "mode": "analyze_previous",
-            "new_question": new_question,
-            "previous_question": latest_query_results["question"],
-            "previous_data_info": {
-                "row_count": latest_query_results["row_count"],
-                "timestamp": latest_query_results["timestamp"],
-                "mode": latest_query_results["mode"]
-            },
-            "analysis_report": analysis_result,
-            "has_previous_data": True
-        })
-        
-    except Exception as e:
-        print(f"이전 데이터 분석 중 오류: {str(e)}")
-        return jsonify({
-            "success": False,
-            "error": f"서버 오류: {str(e)}",
-            "mode": "analyze_previous"
-        }), 500
-
-@app.route('/previous-data-info', methods=['GET'])
-def get_previous_data_info():
-    """저장된 이전 데이터 정보 조회"""
-    if not latest_query_results["data"]:
-        return jsonify({
-            "has_data": False,
-            "message": "저장된 이전 데이터가 없습니다."
-        })
-    
-    return jsonify({
-        "has_data": True,
-        "question": latest_query_results["question"],
-        "timestamp": latest_query_results["timestamp"],
-        "row_count": latest_query_results["row_count"],
-        "mode": latest_query_results["mode"],
-        "columns": list(latest_query_results["data"][0].keys()) if latest_query_results["data"] else []
-    })
 
 # 기존 엔드포인트들 (하위 호환성)
 @app.route('/query', methods=['POST'])
@@ -685,12 +516,7 @@ def health_check():
             "anthropic": "configured" if ANTHROPIC_API_KEY else "not configured",
             "bigquery": "configured (using ADC)" if bigquery_client else "not configured"
         },
-        "supported_modes": ["quick", "structured", "creative_html", "analyze_previous"],
-        "has_previous_data": latest_query_results["data"] is not None,
-        "previous_data_info": {
-            "row_count": latest_query_results["row_count"],
-            "timestamp": latest_query_results["timestamp"]
-        } if latest_query_results["data"] else None
+        "supported_modes": ["quick", "structured", "creative_html"]
     })
 
 @app.route('/schema', methods=['GET'])
@@ -730,7 +556,7 @@ if __name__ == '__main__':
     from config.schema_config import get_full_table_name
     print(f"프로젝트 ID: {PROJECT_ID}")
     print(f"테이블: {get_full_table_name()}")
-    print("지원 모드: 빠른 조회(/quick), 구조화된 분석(/analyze), 창의적 HTML(/creative-html), 이전 데이터 분석(/analyze-previous)")
+    print("지원 모드: 빠른 조회(/quick), 구조화된 분석(/analyze), 창의적 HTML(/creative-html)")
     
     # Cloud Run에서는 PORT 환경변수 사용
     port = int(os.getenv('PORT', 8080))
